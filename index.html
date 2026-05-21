@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나라장터 입찰 분석기</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #1a56db;
+  --primary-dark: #1341ad;
+  --primary-light: #e8f0fe;
+  --success: #16a34a;
+  --success-light: #dcfce7;
+  --danger: #dc2626;
+  --danger-light: #fee2e2;
+  --warning: #d97706;
+  --warning-light: #fef3c7;
+  --input-yellow: #fef9c3;
+  --input-yellow-border: #eab308;
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.05);
+}
+
+body {
+  font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ─── Header ─── */
+.app-header {
+  background: var(--primary);
+  color: #fff;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.app-header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+.header-sub { font-size: 12px; opacity: .75; margin-left: 10px; }
+
+/* ─── Tabs ─── */
+.tab-nav {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  overflow-x: auto;
+  padding: 0 16px;
+  position: sticky;
+  top: 56px;
+  z-index: 99;
+  scrollbar-width: none;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex: none;
+  padding: 14px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+.tab-btn:hover:not(.active) { color: var(--text); background: #f8fafc; }
+
+/* ─── Content ─── */
+.tab-content { display: none; padding: 20px; max-width: 1100px; margin: 0 auto; }
+.tab-content.active { display: block; }
+
+/* ─── Cards ─── */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-title .icon { font-size: 16px; }
+
+/* ─── Info Grid ─── */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.field input, .field select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  transition: border-color .15s, box-shadow .15s;
+  color: var(--text);
+}
+.field input:focus, .field select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(26,86,219,.1);
+}
+.field input.input-yellow {
+  background: var(--input-yellow);
+  border-color: var(--input-yellow-border);
+}
+.field input.input-yellow:focus {
+  border-color: var(--warning);
+  box-shadow: 0 0 0 3px rgba(234,179,8,.15);
+}
+
+/* ─── Calc Grid ─── */
+.calc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.calc-item {
+  background: var(--primary-light);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.calc-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary-dark);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  margin-bottom: 4px;
+}
+.calc-value {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+.calc-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--primary);
+  margin-top: 2px;
+}
+
+/* ─── My Bid ─── */
+.my-bid-area {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 600px) { .my-bid-area { grid-template-columns: 1fr; } }
+
+.input-large {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  padding: 14px 16px !important;
+  text-align: right;
+  letter-spacing: -.5px;
+}
+
+.result-box {
+  padding: 16px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  min-height: 80px;
+}
+.result-badge {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.result-detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 3px 0;
+}
+.result-detail-row span:first-child { color: var(--text-muted); }
+.result-detail-row span:last-child { font-weight: 600; }
+
+.result-ok { background: var(--success-light); border-color: #bbf7d0; }
+.result-fail { background: var(--danger-light); border-color: #fecaca; }
+
+/* ─── Gauge ─── */
+.gauge-wrap {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.gauge-title { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .3px; }
+.gauge-track {
+  position: relative;
+  height: 28px;
+  background: #e2e8f0;
+  border-radius: 14px;
+  overflow: visible;
+  margin: 0 8px;
+}
+.gauge-valid {
+  position: absolute;
+  height: 100%;
+  background: linear-gradient(90deg, #bbf7d0, #86efac);
+  border-radius: 14px;
+  transition: all .3s;
+}
+.gauge-marker {
+  position: absolute;
+  top: -6px;
+  width: 4px;
+  height: 40px;
+  background: var(--primary);
+  border-radius: 2px;
+  transform: translateX(-50%);
+  transition: left .3s;
+  z-index: 5;
+}
+.gauge-marker::after {
+  content: attr(data-label);
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  padding: 0 8px;
+}
+
+/* ─── Info Cards ─── */
+.info-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.info-card {
+  padding: 14px;
+  border-radius: 10px;
+  text-align: center;
+}
+.info-card.blue { background: var(--primary-light); }
+.info-card.green { background: var(--success-light); }
+.info-card.amber { background: var(--warning-light); }
+.info-card-label { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+.info-card-value { font-size: 15px; font-weight: 700; }
+.info-card.blue .info-card-value { color: var(--primary-dark); }
+.info-card.green .info-card-value { color: var(--success); }
+.info-card.amber .info-card-value { color: var(--warning); }
+
+/* ─── Competitor Table ─── */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th {
+  background: #f8fafc;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  border-bottom: 2px solid var(--border);
+}
+.data-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.data-table tr:hover td { background: #f8fafc; }
+.data-table input[type="text"], .data-table input[type="number"] {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--input-yellow);
+  border-color: var(--input-yellow-border);
+}
+.data-table input:focus {
+  outline: none;
+  border-color: var(--warning);
+  box-shadow: 0 0 0 2px rgba(234,179,8,.15);
+}
+
+/* ─── Status Badges ─── */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.badge-ok { background: var(--success-light); color: var(--success); }
+.badge-fail { background: var(--danger-light); color: var(--danger); }
+.badge-over { background: var(--warning-light); color: var(--warning); }
+.badge-empty { background: #f1f5f9; color: var(--text-muted); }
+.rank-num { font-weight: 700; color: var(--primary); }
+
+/* ─── Pattern Analysis ─── */
+.pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.pattern-item {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.pattern-label { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; text-transform: uppercase; }
+.pattern-value { font-size: 15px; font-weight: 700; color: var(--text); }
+
+.recommend-box {
+  background: linear-gradient(135deg, #1a56db11, #3b82f618);
+  border: 2px solid var(--primary);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.recommend-label { font-size: 13px; font-weight: 600; color: var(--primary-dark); margin-bottom: 6px; }
+.recommend-value { font-size: 26px; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+.recommend-desc { font-size: 12px; color: var(--text-muted); }
+
+/* ─── Monthly Table ─── */
+.monthly-wrap { overflow-x: auto; }
+.monthly-table { min-width: 620px; }
+.monthly-table input[type="month"] { background: var(--input-yellow); border-color: var(--input-yellow-border); width: 130px; }
+.monthly-table input.won-input { text-align: right; width: 130px; }
+.monthly-table input[type="number"] { width: 70px; }
+.check-win { display: flex; align-items: center; justify-content: center; }
+.check-win input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); }
+
+/* ─── Stats Grid ─── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.stat-item {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+.stat-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
+.stat-value { font-size: 20px; font-weight: 800; color: var(--text); }
+
+/* ─── Simulation ─── */
+.sim-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-outline { background: #fff; color: var(--primary); border: 2px solid var(--primary); }
+.btn-outline:hover { background: var(--primary-light); }
+
+.prob-badge {
+  background: linear-gradient(135deg, var(--success-light), #a7f3d0);
+  border: 1px solid #6ee7b7;
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.sim-wrap { overflow-x: auto; margin-bottom: 20px; }
+.sim-table { border-collapse: collapse; font-size: 12px; min-width: 800px; }
+.sim-table th, .sim-table td {
+  border: 1px solid var(--border);
+  padding: 7px 10px;
+  text-align: right;
+  white-space: nowrap;
+}
+.sim-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.sim-table .row-header { text-align: left; font-weight: 700; color: var(--primary-dark); background: var(--primary-light) !important; }
+.sim-table .avg-cell { font-weight: 700; background: #fffbeb; color: var(--warning); }
+.sim-table .col-avg { background: #f0fdf4; font-weight: 700; color: var(--success); }
+
+.prob-distribution {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 700px) { .prob-distribution { grid-template-columns: 1fr; } }
+
+.prob-info-box {
+  background: var(--primary-light);
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 16px;
+}
+.prob-info-box h4 { font-size: 13px; color: var(--primary-dark); margin-bottom: 10px; font-weight: 700; }
+.prob-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #dbeafe;
+}
+.prob-info-row:last-child { border-bottom: none; }
+.prob-info-row span:first-child { color: var(--text-muted); }
+.prob-info-row span:last-child { font-weight: 700; color: var(--primary-dark); }
+
+/* ─── Chart wrapper ─── */
+.chart-wrap { position: relative; height: 220px; margin-top: 16px; }
+
+/* ─── Save/Load bar ─── */
+.action-bar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+/* ─── Scrollbar styling ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* ─── Responsive ─── */
+@media (max-width: 480px) {
+  .card { padding: 14px; }
+  .tab-btn { padding: 12px 14px; font-size: 13px; }
+  .calc-value { font-size: 14px; }
+  .recommend-value { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>나라장터 입찰 분석기</h1>
+  <span class="header-sub">조달청 KONEPS 낙찰 전략 도구</span>
+</header>
+
+<div class="action-bar">
+  <button class="btn btn-outline" onclick="saveData()">💾 저장</button>
+  <button class="btn btn-outline" onclick="loadData()">📂 불러오기</button>
+  <button class="btn btn-outline" onclick="clearAll()">🗑 초기화</button>
+  <span id="saveStatus" style="font-size:12px;color:var(--text-muted);align-self:center;"></span>
+</div>
+
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('t1',this)">📋 입찰 분석</button>
+  <button class="tab-btn" onclick="switchTab('t2',this)">🏢 경쟁업체 분석</button>
+  <button class="tab-btn" onclick="switchTab('t3',this)">📅 월별 누적 현황</button>
+  <button class="tab-btn" onclick="switchTab('t4',this)">🎲 예정가격 시뮬레이션</button>
+</nav>
+
+<!-- ═══════════════════════════════════════
+     탭 1: 입찰 분석
+═══════════════════════════════════════ -->
+<section id="t1" class="tab-content active">
+
+  <div class="card">
+    <div class="card-title"><span class="icon">📄</span> 기본 입찰 정보</div>
+    <div class="info-grid">
+      <div class="field">
+        <label>입찰일자</label>
+        <input type="date" id="bidDate" class="input-yellow" oninput="recalcAll()">
+      </div>
+      <div class="field">
+        <label>조달기관</label>
+        <input type="text" id="agency" class="input-yellow" placeholder="예: 대구공공시설관리공단" oninput="recalcAll()">
+      </div>
+      <div class="field">
+        <label>기초금액 (원)</label>
+        <input type="text" id="baseAmt" class="input-yellow" placeholder="91,476,000"
+          oninput="fmtWon(this); recalcAll()" onblur="fmtWon(this)">
+      </div>
+      <div class="field">
+        <label>낙찰하한률 (%)</label>
+        <input type="number" id="minRate" class="input-yellow" placeholder="87.995"
+          step="0.001" min="0" max="100" oninput="recalcAll()">
+      </div>
+      <div class="field">
+        <label>사정률 (%)</label>
+        <input type="number" id="adjRate" class="input-yellow" placeholder="100.81"
+          step="0.001" min="0" oninput="recalcAll()">
+      </div>
+    </div>
+
+    <div class="calc-grid">
+      <div class="calc-item">
+        <span class="calc-label">낙찰하한금액</span>
+        <span class="calc-value" id="c_minAward">-</span>
+        <span class="calc-sub" id="c_minPct">기초금액 × 하한률</span>
+      </div>
+      <div class="calc-item">
+        <span class="calc-label">사정률 적용 낙찰금액</span>
+        <span class="calc-value" id="c_adjAward">-</span>
+        <span class="calc-sub" id="c_adjNote">낙찰하한 × 사정률</span>
+      </div>
+      <div class="calc-item">
+        <span class="calc-label">유효구간 하한 (−3%)</span>
+        <span class="calc-value" id="c_rangeLow">-</span>
+        <span class="calc-sub">기초금액 × 97%</span>
+      </div>
+      <div class="calc-item">
+        <span class="calc-label">유효구간 상한 (+3%)</span>
+        <span class="calc-value" id="c_rangeHigh">-</span>
+        <span class="calc-sub">기초금액 × 103%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">✏️</span> 내 투찰금액 입력</div>
+    <div class="my-bid-area">
+      <div class="field">
+        <label>투찰금액 (원)</label>
+        <input type="text" id="myBid" class="input-yellow input-large"
+          placeholder="금액 입력" oninput="fmtWon(this); recalcAll()" onblur="fmtWon(this)">
+      </div>
+      <div id="resultBox" class="result-box">
+        <div class="result-badge" id="resultBadge" style="color:var(--text-muted)">← 금액을 입력하세요</div>
+        <div id="resultDetails"></div>
+      </div>
+    </div>
+
+    <div class="gauge-wrap" id="gaugeWrap" style="display:none">
+      <div class="gauge-title">내 금액 위치 (예비가격 유효구간 기준)</div>
+      <div class="gauge-track">
+        <div class="gauge-valid" id="gaugeValid"></div>
+        <div class="gauge-marker" id="gaugeMarker" data-label="내 금액"></div>
+      </div>
+      <div class="gauge-labels">
+        <span id="gLabel0">-3%</span>
+        <span style="text-align:center">▲ 유효구간 ▲</span>
+        <span id="gLabel1">기초금액</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">ℹ️</span> 주요 참조 금액</div>
+    <div class="info-cards">
+      <div class="info-card blue">
+        <div class="info-card-label">기초금액</div>
+        <div class="info-card-value" id="ic_base">-</div>
+      </div>
+      <div class="info-card green">
+        <div class="info-card-label">낙찰하한금액</div>
+        <div class="info-card-value" id="ic_minAward">-</div>
+      </div>
+      <div class="info-card amber">
+        <div class="info-card-label">유효구간 하한</div>
+        <div class="info-card-value" id="ic_rangeLow">-</div>
+      </div>
+      <div class="info-card amber">
+        <div class="info-card-label">유효구간 상한</div>
+        <div class="info-card-value" id="ic_rangeHigh">-</div>
+      </div>
+      <div class="info-card blue">
+        <div class="info-card-label">내 투찰률</div>
+        <div class="info-card-value" id="ic_myRate">-</div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════════════════
+     탭 2: 경쟁업체 분석
+═══════════════════════════════════════ -->
+<section id="t2" class="tab-content">
+
+  <div class="card">
+    <div class="card-title"><span class="icon">🏢</span> 경쟁업체 입찰 현황 (최대 10개사)</div>
+    <div style="overflow-x:auto">
+      <table class="data-table" id="compTable">
+        <thead>
+          <tr>
+            <th style="width:50px">순위</th>
+            <th style="min-width:150px">업체명</th>
+            <th style="min-width:150px">입찰금액 (원)</th>
+            <th style="width:90px">투찰률</th>
+            <th style="width:90px">사정률차이</th>
+            <th style="width:80px">결과</th>
+          </tr>
+        </thead>
+        <tbody id="compBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">📊</span> 경쟁업체 패턴 분석</div>
+
+    <div class="recommend-box">
+      <div class="recommend-label">💡 추천 투찰금액 (정상업체 최저의 99.95%)</div>
+      <div class="recommend-value" id="recommendAmt">-</div>
+      <div class="recommend-desc" id="recommendDesc">경쟁업체 데이터를 입력하면 자동 계산됩니다</div>
+    </div>
+
+    <div class="pattern-grid">
+      <div class="pattern-item">
+        <div class="pattern-label">평균 입찰금액</div>
+        <div class="pattern-value" id="p_avg">-</div>
+      </div>
+      <div class="pattern-item">
+        <div class="pattern-label">최소 입찰금액</div>
+        <div class="pattern-value" id="p_min">-</div>
+      </div>
+      <div class="pattern-item">
+        <div class="pattern-label">최대 입찰금액</div>
+        <div class="pattern-value" id="p_max">-</div>
+      </div>
+      <div class="pattern-item">
+        <div class="pattern-label">정상 업체 수</div>
+        <div class="pattern-value" id="p_normal" style="color:var(--success)">-</div>
+      </div>
+      <div class="pattern-item">
+        <div class="pattern-label">미달 업체 수</div>
+        <div class="pattern-value" id="p_below" style="color:var(--danger)">-</div>
+      </div>
+      <div class="pattern-item">
+        <div class="pattern-label">초과 업체 수</div>
+        <div class="pattern-value" id="p_over" style="color:var(--warning)">-</div>
+      </div>
+      <div class="pattern-item">
+        <div class="pattern-label">참여사 수</div>
+        <div class="pattern-value" id="p_total">-</div>
+      </div>
+      <div class="pattern-item">
+        <div class="pattern-label">정상업체 최저금액</div>
+        <div class="pattern-value" id="p_normalMin">-</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap"><canvas id="compChart"></canvas></div>
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════════════════
+     탭 3: 월별 누적 현황
+═══════════════════════════════════════ -->
+<section id="t3" class="tab-content">
+
+  <div class="card">
+    <div class="card-title"><span class="icon">📅</span> 월별 입찰 데이터 입력</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">노란 셀에 월별 입찰 데이터를 입력하세요. 통계는 자동으로 계산됩니다.</p>
+    <div class="monthly-wrap">
+      <table class="data-table monthly-table">
+        <thead>
+          <tr>
+            <th>연월</th>
+            <th>기초금액 (원)</th>
+            <th>내 입찰금액 (원)</th>
+            <th>낙찰</th>
+            <th>경쟁사수</th>
+            <th>투찰률</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">📈</span> 누적 통계 요약</div>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-label">총 입찰 횟수</div>
+        <div class="stat-value" id="s_total">-</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">낙찰 횟수</div>
+        <div class="stat-value" id="s_wins" style="color:var(--success)">-</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">낙찰률</div>
+        <div class="stat-value" id="s_winRate" style="color:var(--primary)">-</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">평균 투찰률</div>
+        <div class="stat-value" id="s_avgRate">-</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">평균 기초금액</div>
+        <div class="stat-value" id="s_avgBase">-</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">평균 입찰금액</div>
+        <div class="stat-value" id="s_avgBid">-</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════════════════
+     탭 4: 예정가격 시뮬레이션
+═══════════════════════════════════════ -->
+<section id="t4" class="tab-content">
+
+  <div class="card">
+    <div class="card-title"><span class="icon">🎲</span> KONEPS 예비가격 시뮬레이션</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.7">
+      나라장터는 기초금액 ±3% 범위에서 <strong>15개 예비가격</strong>을 사전 생성합니다.<br>
+      응찰 후 4개 번호를 무작위 추첨하여 그 평균이 <strong>예정가격</strong>이 됩니다.<br>
+      C(15,4) = <strong>1,365가지</strong> 조합의 전체 확률을 계산하여 낙찰 가능성을 제시합니다.
+    </p>
+    <div class="sim-controls">
+      <button class="btn btn-primary" onclick="generateSimulation()">🔄 새 시뮬레이션 생성</button>
+      <div id="probBadge"></div>
+    </div>
+    <div id="probDistribution" class="prob-distribution" style="margin-bottom:20px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">📊</span> 예비가격 그리드 (15개 시나리오 × 15번호)</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">열 평균 = 해당 시나리오 예정가격 예상 | 행 평균 = 동일 번호의 시나리오별 평균</p>
+    <div class="sim-wrap"><table class="sim-table" id="simTable"></table></div>
+  </div>
+
+</section>
+
+<script>
+// ══════════════════════════════════════════════
+//  유틸리티
+// ══════════════════════════════════════════════
+const won = n => isNaN(n) || n == null ? '-' : Math.round(n).toLocaleString('ko-KR') + '원';
+const pct = (n, d=3) => isNaN(n) || n == null ? '-' : (n*100).toFixed(d) + '%';
+const parseWon = s => { const v = parseFloat(String(s).replace(/[,원\s]/g,'')); return isNaN(v) ? 0 : v; };
+
+function fmtWon(el) {
+  const raw = String(el.value).replace(/[^\d]/g,'');
+  el.value = raw ? parseInt(raw,10).toLocaleString('ko-KR') : '';
+}
+
+function ceilTo(n, unit) { return Math.ceil(n / unit) * unit; }
+function floorTo(n, unit) { return Math.floor(n / unit) * unit; }
+
+// ══════════════════════════════════════════════
+//  탭 전환
+// ══════════════════════════════════════════════
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 't2') renderCompetitorChart();
+  if (id === 't3') renderMonthlyChart();
+  if (id === 't4') updateSimProbability();
+}
+
+// ══════════════════════════════════════════════
+//  탭 1: 입찰 분석 계산
+// ══════════════════════════════════════════════
+function recalcAll() {
+  const base = parseWon(document.getElementById('baseAmt').value);
+  const minRatePct = parseFloat(document.getElementById('minRate').value) || 0;
+  const adjRatePct = parseFloat(document.getElementById('adjRate').value) || 100;
+  const myBid = parseWon(document.getElementById('myBid').value);
+
+  const minRate = minRatePct / 100;
+  const adjRate = adjRatePct / 100;
+
+  const minAward = base * minRate;
+  const adjAward = minAward * adjRate;
+  const rangeLow = base * 0.97;
+  const rangeHigh = base * 1.03;
+
+  // 계산 결과 표시
+  if (base > 0) {
+    document.getElementById('c_minAward').textContent = won(minAward);
+    document.getElementById('c_minPct').textContent = `기초금액 × ${minRatePct}%`;
+    document.getElementById('c_adjAward').textContent = won(adjAward);
+    document.getElementById('c_adjNote').textContent = `낙찰하한 × ${adjRatePct}%`;
+    document.getElementById('c_rangeLow').textContent = won(rangeLow);
+    document.getElementById('c_rangeHigh').textContent = won(rangeHigh);
+    document.getElementById('ic_base').textContent = won(base);
+    document.getElementById('ic_minAward').textContent = won(minAward);
+    document.getElementById('ic_rangeLow').textContent = won(rangeLow);
+    document.getElementById('ic_rangeHigh').textContent = won(rangeHigh);
+  } else {
+    ['c_minAward','c_adjAward','c_rangeLow','c_rangeHigh','ic_base','ic_minAward','ic_rangeLow','ic_rangeHigh'].forEach(id => {
+      document.getElementById(id).textContent = '-';
+    });
+  }
+
+  // 내 투찰금액 분석
+  const rb = document.getElementById('resultBox');
+  const badge = document.getElementById('resultBadge');
+  const details = document.getElementById('resultDetails');
+  const gaugeWrap = document.getElementById('gaugeWrap');
+
+  if (!myBid || base === 0) {
+    badge.textContent = '← 기초금액과 투찰금액을 입력하세요';
+    badge.style.color = 'var(--text-muted)';
+    details.innerHTML = '';
+    rb.className = 'result-box';
+    gaugeWrap.style.display = 'none';
+    document.getElementById('ic_myRate').textContent = '-';
+    return;
+  }
+
+  const myRate = myBid / base;
+  document.getElementById('ic_myRate').textContent = pct(myRate);
+
+  let status, badgeText, isOk;
+  if (myBid > base) {
+    status = 'over'; badgeText = '❌ 예정가격 초과 (무효)'; isOk = false;
+  } else if (myRate < minRate) {
+    status = 'below'; badgeText = '❌ 낙찰하한 미달 (무효)'; isOk = false;
+  } else {
+    status = 'ok'; badgeText = '✅ 낙찰 가능 (정상)'; isOk = true;
+  }
+
+  badge.textContent = badgeText;
+  badge.style.color = isOk ? 'var(--success)' : 'var(--danger)';
+  rb.className = 'result-box ' + (isOk ? 'result-ok' : 'result-fail');
+
+  let pos = '-';
+  if (myBid < rangeLow) pos = '유효구간 하한 미만';
+  else if (myBid > base) pos = '예정가격 초과';
+  else pos = '✅ 유효구간 내';
+
+  details.innerHTML = `
+    <div class="result-detail-row"><span>내 투찰금액</span><span>${won(myBid)}</span></div>
+    <div class="result-detail-row"><span>투찰률</span><span>${pct(myRate)}</span></div>
+    <div class="result-detail-row"><span>기초금액 대비 차이</span><span>${won(myBid - base)}</span></div>
+    <div class="result-detail-row"><span>유효구간 내 위치</span><span>${pos}</span></div>
+  `;
+
+  // 게이지 업데이트
+  if (base > 0) {
+    gaugeWrap.style.display = 'block';
+    const total = rangeHigh - rangeLow;
+    const validLeft = 0;
+    const validWidth = ((base - rangeLow) / total) * 100;
+    const markerPos = Math.min(100, Math.max(0, ((myBid - rangeLow) / total) * 100));
+
+    document.getElementById('gaugeValid').style.cssText = `left:${validLeft}%;width:${Math.max(0,validWidth)}%`;
+    document.getElementById('gaugeMarker').style.left = markerPos + '%';
+    document.getElementById('gLabel0').textContent = won(rangeLow);
+    document.getElementById('gLabel1').textContent = won(rangeHigh);
+  }
+
+  // 경쟁업체 탭도 재계산
+  recalcCompetitors();
+  updateSimProbability();
+}
+
+// ══════════════════════════════════════════════
+//  탭 2: 경쟁업체 분석
+// ══════════════════════════════════════════════
+const COMP_ROWS = 10;
+
+function buildCompTable() {
+  const tbody = document.getElementById('compBody');
+  tbody.innerHTML = '';
+  for (let i = 0; i < COMP_ROWS; i++) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td id="cr_rank_${i}" style="text-align:center">-</td>
+      <td><input type="text" id="cr_name_${i}" placeholder="업체명 입력" oninput="recalcCompetitors()"></td>
+      <td><input type="text" id="cr_amt_${i}" placeholder="0" class="won-input"
+        oninput="fmtWon(this);recalcCompetitors()" onblur="fmtWon(this)"></td>
+      <td id="cr_rate_${i}" style="text-align:right">-</td>
+      <td id="cr_diff_${i}" style="text-align:right">-</td>
+      <td id="cr_status_${i}" style="text-align:center"><span class="badge badge-empty">-</span></td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function recalcCompetitors() {
+  const base = parseWon(document.getElementById('baseAmt').value);
+  const minRatePct = parseFloat(document.getElementById('minRate').value) || 0;
+  const minRate = minRatePct / 100;
+
+  const entries = [];
+  for (let i = 0; i < COMP_ROWS; i++) {
+    const amt = parseWon(document.getElementById(`cr_amt_${i}`).value);
+    if (amt > 0) {
+      const rate = base > 0 ? amt / base : 0;
+      let status = 'empty';
+      if (base > 0) {
+        if (amt > base) status = 'over';
+        else if (rate < minRate) status = 'below';
+        else status = 'ok';
+      }
+      entries.push({ i, amt, rate, status });
+    } else {
+      entries.push({ i, amt: 0, rate: 0, status: 'empty' });
+    }
+  }
+
+  // 정상 업체만 순위 매기기
+  const normalEntries = entries.filter(e => e.status === 'ok').sort((a,b) => a.amt - b.amt);
+  normalEntries.forEach((e, idx) => { e.rank = idx + 1; });
+
+  entries.forEach(e => {
+    const rank = e.rank ?? null;
+    const r_rank = document.getElementById(`cr_rank_${e.i}`);
+    const r_rate = document.getElementById(`cr_rate_${e.i}`);
+    const r_diff = document.getElementById(`cr_diff_${e.i}`);
+    const r_status = document.getElementById(`cr_status_${e.i}`);
+
+    if (e.status === 'empty') {
+      r_rank.textContent = '-';
+      r_rate.textContent = '-';
+      r_diff.textContent = '-';
+      r_status.innerHTML = '<span class="badge badge-empty">-</span>';
+    } else {
+      r_rank.innerHTML = rank ? `<span class="rank-num">${rank}</span>` : '-';
+      r_rate.textContent = pct(e.rate);
+      r_diff.textContent = base > 0 ? pct(e.rate - minRate, 3) : '-';
+      if (e.status === 'ok') r_status.innerHTML = '<span class="badge badge-ok">정상</span>';
+      else if (e.status === 'below') r_status.innerHTML = '<span class="badge badge-fail">미달</span>';
+      else r_status.innerHTML = '<span class="badge badge-over">초과</span>';
+    }
+  });
+
+  // 패턴 분석
+  const valid = entries.filter(e => e.amt > 0);
+  const normal = entries.filter(e => e.status === 'ok');
+  const below = entries.filter(e => e.status === 'below');
+  const over = entries.filter(e => e.status === 'over');
+
+  document.getElementById('p_total').textContent = valid.length || '-';
+  document.getElementById('p_normal').textContent = normal.length || (valid.length ? '0' : '-');
+  document.getElementById('p_below').textContent = below.length || (valid.length ? '0' : '-');
+  document.getElementById('p_over').textContent = over.length || (valid.length ? '0' : '-');
+
+  if (valid.length > 0) {
+    const amts = valid.map(e => e.amt);
+    document.getElementById('p_avg').textContent = won(amts.reduce((s,v)=>s+v,0)/amts.length);
+    document.getElementById('p_min').textContent = won(Math.min(...amts));
+    document.getElementById('p_max').textContent = won(Math.max(...amts));
+  } else {
+    ['p_avg','p_min','p_max'].forEach(id => document.getElementById(id).textContent = '-');
+  }
+
+  if (normal.length > 0) {
+    const normalMin = Math.min(...normal.map(e => e.amt));
+    document.getElementById('p_normalMin').textContent = won(normalMin);
+    const rec = ceilTo(normalMin * 0.9995, 1000);
+    document.getElementById('recommendAmt').textContent = won(rec);
+    document.getElementById('recommendDesc').textContent =
+      `정상업체 최저 ${won(normalMin)} × 99.95% = ${won(normalMin * 0.9995)} → 1,000원 단위 올림`;
+  } else {
+    document.getElementById('p_normalMin').textContent = '-';
+    document.getElementById('recommendAmt').textContent = '-';
+    document.getElementById('recommendDesc').textContent = '정상 업체 데이터를 입력하면 자동 계산됩니다';
+  }
+}
+
+// Chart.js 인스턴스
+let compChartInst = null, monthlyChartInst = null;
+
+function renderCompetitorChart() {
+  const base = parseWon(document.getElementById('baseAmt').value);
+  const minRatePct = parseFloat(document.getElementById('minRate').value) || 0;
+  const minRate = minRatePct / 100;
+
+  const labels = [], colors = [], amounts = [];
+  for (let i = 0; i < COMP_ROWS; i++) {
+    const name = document.getElementById(`cr_name_${i}`).value.trim() || `업체${i+1}`;
+    const amt = parseWon(document.getElementById(`cr_amt_${i}`).value);
+    if (amt > 0) {
+      labels.push(name);
+      amounts.push(amt);
+      let rate = base > 0 ? amt / base : 0;
+      if (amt > base) colors.push('#f59e0b88');
+      else if (rate < minRate) colors.push('#ef444488');
+      else colors.push('#22c55e88');
+    }
+  }
+
+  const ctx = document.getElementById('compChart').getContext('2d');
+  if (compChartInst) compChartInst.destroy();
+  if (amounts.length === 0) return;
+
+  compChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: '입찰금액',
+        data: amounts,
+        backgroundColor: colors,
+        borderColor: colors.map(c => c.replace('88','cc')),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => won(ctx.raw)
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: { callback: v => (v/1e6).toFixed(1)+'M' },
+          grid: { color: '#f1f5f9' }
+        },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  탭 3: 월별 누적 현황
+// ══════════════════════════════════════════════
+const MONTH_ROWS = 12;
+
+function buildMonthlyTable() {
+  const tbody = document.getElementById('monthlyBody');
+  tbody.innerHTML = '';
+  for (let i = 0; i < MONTH_ROWS; i++) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="month" id="m_month_${i}" oninput="recalcMonthly()"></td>
+      <td><input type="text" id="m_base_${i}" placeholder="기초금액" class="won-input"
+        oninput="fmtWon(this);recalcMonthly()" onblur="fmtWon(this)"></td>
+      <td><input type="text" id="m_bid_${i}" placeholder="내 입찰금액" class="won-input"
+        oninput="fmtWon(this);recalcMonthly()" onblur="fmtWon(this)"></td>
+      <td class="check-win"><input type="checkbox" id="m_win_${i}" onchange="recalcMonthly()"></td>
+      <td><input type="number" id="m_comp_${i}" placeholder="0" min="0" oninput="recalcMonthly()"></td>
+      <td id="m_rate_${i}" style="text-align:right;color:var(--text-muted)">-</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function recalcMonthly() {
+  let total = 0, wins = 0, sumBase = 0, sumBid = 0, sumRate = 0, rateCount = 0;
+  const monthLabels = [], bidAmts = [], baseAmts = [], winFlags = [];
+
+  for (let i = 0; i < MONTH_ROWS; i++) {
+    const month = document.getElementById(`m_month_${i}`).value;
+    const base = parseWon(document.getElementById(`m_base_${i}`).value);
+    const bid = parseWon(document.getElementById(`m_bid_${i}`).value);
+    const win = document.getElementById(`m_win_${i}`).checked;
+    const rate = (base > 0 && bid > 0) ? bid / base : null;
+
+    if (rate !== null) document.getElementById(`m_rate_${i}`).textContent = pct(rate);
+    else document.getElementById(`m_rate_${i}`).textContent = '-';
+
+    if (month && bid > 0) {
+      total++;
+      if (win) wins++;
+      if (base > 0) sumBase += base;
+      sumBid += bid;
+      if (rate !== null) { sumRate += rate; rateCount++; }
+      monthLabels.push(month);
+      bidAmts.push(bid);
+      baseAmts.push(base || 0);
+      winFlags.push(win);
+    }
+  }
+
+  document.getElementById('s_total').textContent = total || '-';
+  document.getElementById('s_wins').textContent = total ? wins : '-';
+  document.getElementById('s_winRate').textContent = total ? pct(wins/total, 1) : '-';
+  document.getElementById('s_avgRate').textContent = rateCount ? pct(sumRate/rateCount) : '-';
+  document.getElementById('s_avgBase').textContent = total ? won(sumBase/total) : '-';
+  document.getElementById('s_avgBid').textContent = total ? won(sumBid/total) : '-';
+
+  // 차트 업데이트
+  const ctx = document.getElementById('monthlyChart').getContext('2d');
+  if (monthlyChartInst) monthlyChartInst.destroy();
+  if (monthLabels.length === 0) return;
+
+  monthlyChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: monthLabels,
+      datasets: [
+        {
+          label: '내 입찰금액',
+          data: bidAmts,
+          borderColor: '#1a56db',
+          backgroundColor: '#1a56db22',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 5,
+          pointBackgroundColor: winFlags.map(w => w ? '#16a34a' : '#dc2626'),
+        },
+        {
+          label: '기초금액',
+          data: baseAmts,
+          borderColor: '#94a3b8',
+          borderDash: [5,3],
+          tension: 0.3,
+          pointRadius: 3,
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + won(ctx.raw) } },
+        legend: { labels: { font: { size: 12 } } }
+      },
+      scales: {
+        y: {
+          ticks: { callback: v => (v/1e6).toFixed(1)+'M' },
+          grid: { color: '#f1f5f9' }
+        },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+function renderMonthlyChart() { recalcMonthly(); }
+
+// ══════════════════════════════════════════════
+//  탭 4: KONEPS 예비가격 시뮬레이션
+// ══════════════════════════════════════════════
+let simPrices = []; // 15×15 grid
+
+function generateSimulation() {
+  const base = parseWon(document.getElementById('baseAmt').value);
+  if (base <= 0) { alert('탭 1에서 기초금액을 먼저 입력하세요.'); return; }
+
+  simPrices = [];
+  for (let scenario = 0; scenario < 15; scenario++) {
+    const scenarioPrices = [];
+    for (let num = 0; num < 15; num++) {
+      const factor = 1 + (Math.random() * 0.06 - 0.03);
+      scenarioPrices.push(Math.round(base * factor));
+    }
+    simPrices.push(scenarioPrices);
+  }
+
+  renderSimTable();
+  updateSimProbability();
+  saveData();
+}
+
+function renderSimTable() {
+  const tbl = document.getElementById('simTable');
+  if (simPrices.length === 0) { tbl.innerHTML = ''; return; }
+
+  let html = '<thead><tr><th class="row-header">번호</th>';
+  for (let s = 0; s < 15; s++) html += `<th>시나리오${s+1}</th>`;
+  html += '<th class="col-avg">행 평균</th></tr></thead><tbody>';
+
+  for (let num = 0; num < 15; num++) {
+    html += `<tr><td class="row-header">#${num+1}</td>`;
+    let rowSum = 0;
+    for (let s = 0; s < 15; s++) {
+      const v = simPrices[s][num];
+      rowSum += v;
+      html += `<td>${v.toLocaleString('ko-KR')}</td>`;
+    }
+    html += `<td class="avg-cell">${Math.round(rowSum/15).toLocaleString('ko-KR')}</td></tr>`;
+  }
+
+  // 열 평균 (각 시나리오의 예정가격 예상값)
+  html += '<tr><td class="row-header">열 평균<br><small>(예정가 예상)</small></td>';
+  const colAvgs = [];
+  for (let s = 0; s < 15; s++) {
+    const avg = simPrices[s].reduce((a,b)=>a+b,0) / 15;
+    colAvgs.push(avg);
+    html += `<td class="col-avg">${Math.round(avg).toLocaleString('ko-KR')}</td>`;
+  }
+  const allAvg = colAvgs.reduce((a,b)=>a+b,0)/15;
+  html += `<td class="col-avg" style="font-size:11px">${Math.round(allAvg).toLocaleString('ko-KR')}</td>`;
+  html += '</tr></tbody>';
+
+  tbl.innerHTML = html;
+}
+
+// C(15,4) = 1365 조합 전체 계산
+function getCombinations(n, r) {
+  const result = [];
+  const stack = [[[], 0]];
+  while (stack.length) {
+    const [cur, start] = stack.pop();
+    if (cur.length === r) { result.push(cur); continue; }
+    for (let i = start; i < n; i++) {
+      stack.push([[...cur, i], i+1]);
+    }
+  }
+  return result;
+}
+
+function updateSimProbability() {
+  const base = parseWon(document.getElementById('baseAmt').value);
+  const minRatePct = parseFloat(document.getElementById('minRate').value) || 0;
+  const myBid = parseWon(document.getElementById('myBid').value);
+  const minRate = minRatePct / 100;
+
+  const probBadge = document.getElementById('probBadge');
+  const probDist = document.getElementById('probDistribution');
+
+  if (simPrices.length === 0 || base <= 0) {
+    probBadge.innerHTML = '<span style="font-size:13px;color:var(--text-muted)">시뮬레이션을 생성하면 낙찰 확률이 계산됩니다.</span>';
+    probDist.innerHTML = '';
+    return;
+  }
+
+  // 단일 시나리오(첫 번째) 기준으로 C(15,4) 계산
+  const prices = simPrices[0];
+  const combos = getCombinations(15, 4);
+
+  let validCount = 0, allEstimated = [];
+
+  combos.forEach(combo => {
+    const estPrice = combo.reduce((s,i) => s + prices[i], 0) / 4;
+    allEstimated.push(estPrice);
+    if (myBid > 0) {
+      const minBid = estPrice * minRate;
+      if (myBid >= minBid && myBid <= estPrice) validCount++;
+    }
+  });
+
+  allEstimated.sort((a,b) => a-b);
+  const estMin = Math.min(...allEstimated);
+  const estMax = Math.max(...allEstimated);
+  const estAvg = allEstimated.reduce((s,v)=>s+v,0) / allEstimated.length;
+  const estMed = allEstimated[Math.floor(allEstimated.length/2)];
+
+  if (myBid > 0) {
+    const prob = (validCount / combos.length * 100).toFixed(1);
+    const color = validCount/combos.length > 0.5 ? 'var(--success)' : validCount > 0 ? 'var(--warning)' : 'var(--danger)';
+    probBadge.innerHTML = `<div class="prob-badge" style="background:${validCount/combos.length>0.5?'var(--success-light)':'var(--warning-light)'};border-color:${color};color:${color}">낙찰 유효 확률: ${prob}% (${validCount}/${combos.length} 조합)</div>`;
+  } else {
+    probBadge.innerHTML = '<span style="font-size:13px;color:var(--text-muted)">탭 1에서 내 투찰금액을 입력하면 낙찰 확률이 표시됩니다.</span>';
+  }
+
+  probDist.innerHTML = `
+    <div class="prob-info-box">
+      <h4>예정가격 예상 범위 (1,365가지 조합)</h4>
+      <div class="prob-info-row"><span>최소 예정가격</span><span>${won(estMin)}</span></div>
+      <div class="prob-info-row"><span>최대 예정가격</span><span>${won(estMax)}</span></div>
+      <div class="prob-info-row"><span>평균 예정가격</span><span>${won(estAvg)}</span></div>
+      <div class="prob-info-row"><span>중앙값 예정가격</span><span>${won(estMed)}</span></div>
+      <div class="prob-info-row"><span>총 경우의 수</span><span>C(15,4) = ${combos.length.toLocaleString()}가지</span></div>
+    </div>
+    <div class="prob-info-box">
+      <h4>예비가격 범위 (시나리오 1 기준)</h4>
+      <div class="prob-info-row"><span>기초금액</span><span>${won(base)}</span></div>
+      <div class="prob-info-row"><span>예비가격 하한</span><span>${won(Math.min(...prices))}</span></div>
+      <div class="prob-info-row"><span>예비가격 상한</span><span>${won(Math.max(...prices))}</span></div>
+      <div class="prob-info-row"><span>낙찰하한률</span><span>${pct(minRate)}</span></div>
+      ${myBid > 0 ? `<div class="prob-info-row"><span>내 투찰금액</span><span>${won(myBid)}</span></div>` : ''}
+      ${myBid > 0 ? `<div class="prob-info-row"><span>내 투찰률</span><span>${pct(myBid/base)}</span></div>` : ''}
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════
+//  저장 / 불러오기 / 초기화
+// ══════════════════════════════════════════════
+function saveData() {
+  const d = {
+    bidDate: document.getElementById('bidDate').value,
+    agency: document.getElementById('agency').value,
+    baseAmt: document.getElementById('baseAmt').value,
+    minRate: document.getElementById('minRate').value,
+    adjRate: document.getElementById('adjRate').value,
+    myBid: document.getElementById('myBid').value,
+    competitors: [],
+    monthly: [],
+    simPrices,
+  };
+
+  for (let i = 0; i < COMP_ROWS; i++) {
+    d.competitors.push({
+      name: document.getElementById(`cr_name_${i}`).value,
+      amt: document.getElementById(`cr_amt_${i}`).value,
+    });
+  }
+
+  for (let i = 0; i < MONTH_ROWS; i++) {
+    d.monthly.push({
+      month: document.getElementById(`m_month_${i}`).value,
+      base: document.getElementById(`m_base_${i}`).value,
+      bid: document.getElementById(`m_bid_${i}`).value,
+      win: document.getElementById(`m_win_${i}`).checked,
+      comp: document.getElementById(`m_comp_${i}`).value,
+    });
+  }
+
+  localStorage.setItem('narajangteo_v2', JSON.stringify(d));
+  const s = document.getElementById('saveStatus');
+  s.textContent = '저장됨: ' + new Date().toLocaleTimeString('ko-KR');
+}
+
+function loadData() {
+  const raw = localStorage.getItem('narajangteo_v2');
+  if (!raw) { alert('저장된 데이터가 없습니다.'); return; }
+  const d = JSON.parse(raw);
+
+  document.getElementById('bidDate').value = d.bidDate || '';
+  document.getElementById('agency').value = d.agency || '';
+  document.getElementById('baseAmt').value = d.baseAmt || '';
+  document.getElementById('minRate').value = d.minRate || '';
+  document.getElementById('adjRate').value = d.adjRate || '';
+  document.getElementById('myBid').value = d.myBid || '';
+
+  if (d.competitors) {
+    d.competitors.forEach((c, i) => {
+      document.getElementById(`cr_name_${i}`).value = c.name || '';
+      document.getElementById(`cr_amt_${i}`).value = c.amt || '';
+    });
+  }
+
+  if (d.monthly) {
+    d.monthly.forEach((m, i) => {
+      document.getElementById(`m_month_${i}`).value = m.month || '';
+      document.getElementById(`m_base_${i}`).value = m.base || '';
+      document.getElementById(`m_bid_${i}`).value = m.bid || '';
+      document.getElementById(`m_win_${i}`).checked = m.win || false;
+      document.getElementById(`m_comp_${i}`).value = m.comp || '';
+    });
+  }
+
+  if (d.simPrices && d.simPrices.length) {
+    simPrices = d.simPrices;
+    renderSimTable();
+  }
+
+  recalcAll();
+  recalcMonthly();
+  document.getElementById('saveStatus').textContent = '불러오기 완료';
+}
+
+function clearAll() {
+  if (!confirm('모든 데이터를 초기화하시겠습니까?')) return;
+  localStorage.removeItem('narajangteo_v2');
+  location.reload();
+}
+
+// ══════════════════════════════════════════════
+//  초기화
+// ══════════════════════════════════════════════
+(function init() {
+  buildCompTable();
+  buildMonthlyTable();
+
+  // 자동 불러오기
+  const saved = localStorage.getItem('narajangteo_v2');
+  if (saved) {
+    try { loadData(); } catch(e) {}
+  } else {
+    // 샘플 데이터 세팅
+    document.getElementById('bidDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('baseAmt').value = '91,476,000';
+    document.getElementById('minRate').value = '87.995';
+    document.getElementById('adjRate').value = '100.81';
+    recalcAll();
+  }
+})();
+</script>
+</body>
+</html>
