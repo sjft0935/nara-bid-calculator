@@ -500,6 +500,98 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
+/* ─── OCR / Modal ─── */
+.ocr-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 12px 14px;
+  background: linear-gradient(135deg,#eff6ff,#f0fdf4);
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+}
+.ocr-bar-label { font-size: 12px; color: var(--primary-dark); font-weight: 600; margin-right: 4px; }
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-box {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 540px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  overflow: hidden;
+}
+.modal-header {
+  background: var(--primary);
+  color: #fff;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h3 { font-size: 15px; font-weight: 700; }
+.modal-close { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; line-height: 1; padding: 0 4px; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+.drop-zone {
+  border: 2px dashed #93c5fd;
+  border-radius: 12px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: #f8fafc;
+  margin-bottom: 12px;
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.drag-over { border-color: var(--primary); background: var(--primary-light); }
+.drop-zone img { max-width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 8px; }
+.drop-zone-text { color: var(--text-muted); font-size: 13px; margin-bottom: 8px; }
+.drop-zone-hint { font-size: 12px; color: #94a3b8; }
+.drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+
+.api-key-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: flex-end; }
+.api-key-row .field { flex: 1; margin: 0; }
+.api-key-row input { font-family: monospace; font-size: 12px; }
+
+.ocr-status {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-top: 10px;
+  display: none;
+}
+.ocr-status.loading { background: var(--primary-light); color: var(--primary-dark); display: block; }
+.ocr-status.ok { background: var(--success-light); color: var(--success); display: block; }
+.ocr-status.err { background: var(--danger-light); color: var(--danger); display: block; }
+
+.paste-area {
+  width: 100%;
+  height: 180px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 12px;
+  resize: vertical;
+  background: var(--input-yellow);
+}
+.paste-preview { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+.parse-row { padding: 4px 0; border-bottom: 1px solid #f1f5f9; display: flex; gap: 10px; }
+.parse-row span:first-child { font-weight: 600; color: var(--text); min-width: 160px; }
+.parse-row span:last-child { color: var(--primary-dark); font-weight: 700; }
+
 /* ─── Responsive ─── */
 @media (max-width: 480px) {
   .card { padding: 14px; }
@@ -650,6 +742,21 @@ body {
 
   <div class="card">
     <div class="card-title"><span class="icon">🏢</span> 경쟁업체 입찰 현황 (최대 10개사)</div>
+
+    <div class="ocr-bar">
+      <span class="ocr-bar-label">⚡ 자동 입력</span>
+      <button class="btn btn-primary" onclick="openTextModal()" style="font-size:13px;padding:8px 14px">
+        📋 텍스트 붙여넣기
+      </button>
+      <button class="btn btn-outline" onclick="openBookmarkletModal()" style="font-size:13px;padding:8px 14px">
+        🔖 북마클릿 설치
+      </button>
+      <button class="btn btn-outline" onclick="clearComp()" style="font-size:13px;padding:8px 14px;color:var(--danger);border-color:var(--danger)">
+        🗑 초기화
+      </button>
+      <span id="importBadge" style="font-size:12px;color:var(--success);font-weight:700;margin-left:auto;display:none"></span>
+    </div>
+
     <div style="overflow-x:auto">
       <table class="data-table" id="compTable">
         <thead>
@@ -1424,11 +1531,204 @@ function clearAll() {
 }
 
 // ══════════════════════════════════════════════
+//  모달 공통
+// ══════════════════════════════════════════════
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function clearComp() {
+  if (!confirm('경쟁업체 데이터를 모두 지우시겠습니까?')) return;
+  for (let i = 0; i < COMP_ROWS; i++) {
+    document.getElementById(`cr_name_${i}`).value = '';
+    document.getElementById(`cr_amt_${i}`).value = '';
+  }
+  recalcCompetitors();
+}
+
+// ══════════════════════════════════════════════
+//  ② 텍스트 붙여넣기 파서
+// ══════════════════════════════════════════════
+function openTextModal() {
+  document.getElementById('pasteArea').value = '';
+  document.getElementById('pastePreview').innerHTML = '';
+  document.getElementById('textModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('pasteArea').focus(), 100);
+}
+
+function parseTableText(raw) {
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+  const results = [];
+  const seen = new Set();
+
+  for (const line of lines) {
+    // 헤더 줄 건너뛰기
+    if (/업체명|사업자등록|순위|입찰금액/.test(line)) continue;
+
+    // 탭 구분 파싱 (나라장터 표 복사 기본 형식)
+    const cells = line.split('\t');
+    if (cells.length >= 5) {
+      const name = cells[2]?.trim().replace(/\s+/g, '');
+      const amtRaw = cells[4]?.trim().replace(/[,원\s]/g, '');
+      const amount = parseInt(amtRaw);
+      if (name && name.length >= 2 && amount > 1_000_000 && !seen.has(name)) {
+        seen.add(name);
+        results.push({ name, amount });
+        continue;
+      }
+    }
+
+    // 폴백: 줄에서 큰 숫자 + 한글 업체명 추출
+    const amtMatch = line.match(/\b(\d{1,3}(?:,\d{3})+|\d{7,10})\b/g);
+    const korMatch  = line.match(/[가-힣(주)()㈜\w]{2,20}(?:주식회사|㈜|\(주\)|TECH|tech)?/g);
+    if (amtMatch && korMatch) {
+      for (const a of amtMatch) {
+        const amount = parseInt(a.replace(/,/g, ''));
+        if (amount > 10_000_000 && amount < 1_000_000_000_000) {
+          const name = korMatch.find(k => /[가-힣]/.test(k) && k.length >= 2) || '';
+          if (name && !seen.has(name)) {
+            seen.add(name);
+            results.push({ name, amount });
+          }
+          break;
+        }
+      }
+    }
+  }
+  return results;
+}
+
+let _parsedData = [];
+
+function previewParse() {
+  const raw = document.getElementById('pasteArea').value;
+  _parsedData = parseTableText(raw);
+  const el = document.getElementById('pastePreview');
+  if (_parsedData.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-muted)">인식된 데이터가 없습니다. 나라장터 표를 전체 선택 후 복사해주세요.</span>';
+    return;
+  }
+  el.innerHTML = `
+    <div style="font-weight:700;color:var(--success);margin-bottom:6px">✅ ${_parsedData.length}개 업체 인식됨</div>
+    ${_parsedData.map((d,i) => `
+      <div class="parse-row">
+        <span>${i+1}. ${d.name}</span>
+        <span>${d.amount.toLocaleString('ko-KR')}원</span>
+      </div>`).join('')}
+  `;
+}
+
+function applyParsed() {
+  if (_parsedData.length === 0) { alert('인식된 데이터가 없습니다.'); return; }
+  populateCompetitors(_parsedData);
+  closeModal('textModal');
+  // 탭 2로 이동
+  document.querySelectorAll('.tab-btn')[1].click();
+}
+
+// ══════════════════════════════════════════════
+//  경쟁업체 테이블 자동 채우기 (공통)
+// ══════════════════════════════════════════════
+function populateCompetitors(data) {
+  // 기존 데이터 지우기
+  for (let i = 0; i < COMP_ROWS; i++) {
+    document.getElementById(`cr_name_${i}`).value = '';
+    document.getElementById(`cr_amt_${i}`).value = '';
+  }
+  // 최대 COMP_ROWS 개만 채우기
+  const limit = Math.min(data.length, COMP_ROWS);
+  for (let i = 0; i < limit; i++) {
+    document.getElementById(`cr_name_${i}`).value = data[i].name;
+    document.getElementById(`cr_amt_${i}`).value = data[i].amount.toLocaleString('ko-KR');
+  }
+  recalcCompetitors();
+  renderCompetitorChart();
+
+  const badge = document.getElementById('importBadge');
+  badge.textContent = `✅ ${limit}개 업체 자동 입력됨`;
+  badge.style.display = 'inline';
+  setTimeout(() => { badge.style.display = 'none'; }, 5000);
+}
+
+// ══════════════════════════════════════════════
+//  ③ 북마클릿 설치
+// ══════════════════════════════════════════════
+(function setupBookmarklet() {
+  // 북마클릿 코드: 나라장터 개찰결과 표를 파싱해서 이 앱 URL에 hash로 전달
+  const appUrl = 'https://sjft0935.github.io/nara-bid-calculator/';
+  const code = `(function(){
+var d=[];
+document.querySelectorAll('table').forEach(function(t){
+  var hs=t.querySelectorAll('th'),nI=-1,aI=-1;
+  hs.forEach(function(h,i){var tx=h.innerText.replace(/\\s/g,'');if(tx.includes('업체명'))nI=i;if(tx.includes('입찰금액'))aI=i;});
+  if(nI>=0&&aI>=0){t.querySelectorAll('tr').forEach(function(r){var c=r.querySelectorAll('td');if(c.length>Math.max(nI,aI)){var n=c[nI].innerText.trim(),a=c[aI].innerText.replace(/[,원\\s]/g,'');if(n&&parseInt(a)>0)d.push(n+'|'+a);}});}
+});
+if(d.length>0){window.open('${appUrl}#import='+encodeURIComponent(d.join('~')),'_blank');}
+else{alert('개찰결과상세조회 페이지에서 실행해주세요.');}
+})();`;
+
+  const minified = 'javascript:' + code.replace(/\n\s*/g, '');
+  const linkEl = document.getElementById('bookmarkletLink');
+  const codeEl = document.getElementById('bookmarkletCode');
+  if (linkEl) linkEl.href = minified;
+  if (codeEl) codeEl.value = minified;
+})();
+
+function openBookmarkletModal() {
+  document.getElementById('bookmarkletModal').style.display = 'flex';
+}
+
+function copyBookmarklet() {
+  const code = document.getElementById('bookmarkletCode').value;
+  navigator.clipboard.writeText(code).then(() => alert('복사됐습니다! 즐겨찾기 URL란에 붙여넣으세요.'));
+}
+
+// ══════════════════════════════════════════════
+//  URL 해시에서 북마클릿 데이터 자동 임포트
+// ══════════════════════════════════════════════
+function checkHashImport() {
+  const hash = decodeURIComponent(location.hash);
+  const m = hash.match(/^#import=(.+)/);
+  if (!m) return;
+
+  // 해시 클리어 (재로드 시 재실행 방지)
+  history.replaceState(null, '', location.pathname + location.search);
+
+  try {
+    const entries = m[1].split('~');
+    const data = entries.map(e => {
+      const [name, amtStr] = e.split('|');
+      return { name: name?.trim(), amount: parseInt(amtStr) || 0 };
+    }).filter(d => d.name && d.amount > 0);
+
+    if (data.length === 0) return;
+
+    // 탭 2로 전환 후 데이터 적용
+    const tab2Btn = document.querySelectorAll('.tab-btn')[1];
+    tab2Btn.click();
+    setTimeout(() => {
+      populateCompetitors(data);
+      // 안내 토스트
+      const badge = document.getElementById('importBadge');
+      badge.textContent = `🔖 북마클릿으로 ${data.length}개 업체 자동 입력됨!`;
+      badge.style.display = 'inline';
+      setTimeout(() => { badge.style.display = 'none'; }, 6000);
+    }, 200);
+  } catch(e) {
+    console.warn('Import parse error:', e);
+  }
+}
+
+// ══════════════════════════════════════════════
 //  초기화
 // ══════════════════════════════════════════════
 (function init() {
   buildCompTable();
   buildMonthlyTable();
+
+  // 북마클릿 해시 임포트 (저장 데이터보다 우선)
+  if (location.hash.startsWith('#import=')) {
+    checkHashImport();
+    return;
+  }
 
   // 자동 불러오기
   const saved = localStorage.getItem('narajangteo_v2');
@@ -1444,5 +1744,85 @@ function clearAll() {
   }
 })();
 </script>
+<!-- ═══ 텍스트 붙여넣기 모달 ═══ -->
+<div id="textModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('textModal')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>📋 나라장터 개찰결과 텍스트 붙여넣기</h3>
+      <button class="modal-close" onclick="closeModal('textModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.8">
+        <strong>📌 사용 방법</strong><br>
+        1. 나라장터 → 개찰결과상세조회 페이지 열기<br>
+        2. 표를 마우스로 전체 선택 (또는 <kbd>Ctrl+A</kbd>)<br>
+        3. <kbd>Ctrl+C</kbd> 복사<br>
+        4. 아래 칸에 <kbd>Ctrl+V</kbd> 붙여넣기
+      </div>
+      <textarea class="paste-area" id="pasteArea"
+        placeholder="여기에 Ctrl+V로 붙여넣으세요..."
+        oninput="previewParse()"></textarea>
+      <div class="paste-preview" id="pastePreview"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('textModal')">취소</button>
+      <button class="btn btn-primary" onclick="applyParsed()">✅ 경쟁업체에 적용</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 북마클릿 설치 모달 ═══ -->
+<div id="bookmarkletModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('bookmarkletModal')">
+  <div class="modal-box" style="max-width:580px">
+    <div class="modal-header">
+      <h3>🔖 북마클릿 설치 — 클릭 한 번으로 자동 입력</h3>
+      <button class="modal-close" onclick="closeModal('bookmarkletModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.9">
+        <strong>✨ 북마클릿이란?</strong> 즐겨찾기에 저장된 작은 프로그램입니다.<br>
+        나라장터 개찰결과 페이지에서 클릭하면 → 데이터가 자동으로 이 앱에 입력됩니다.
+      </div>
+
+      <div style="font-weight:700;margin-bottom:10px;font-size:14px">📥 설치 방법</div>
+      <div style="display:grid;gap:10px;margin-bottom:20px">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <span style="background:var(--primary);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">1</span>
+          <span style="font-size:13px">브라우저 즐겨찾기 바를 표시하세요 (<kbd>Ctrl+Shift+B</kbd>)</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <span style="background:var(--primary);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">2</span>
+          <span style="font-size:13px">아래 버튼을 <strong>즐겨찾기 바로 드래그</strong>하거나, 우클릭 → "즐겨찾기에 추가"</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <span style="background:var(--primary);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">3</span>
+          <span style="font-size:13px">나라장터 개찰결과상세조회 페이지에서 저장된 북마클릿 클릭</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <span style="background:var(--success);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">✓</span>
+          <span style="font-size:13px">새 탭으로 이 앱이 열리며 경쟁업체 데이터가 자동으로 입력됩니다!</span>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-bottom:16px">
+        <a id="bookmarkletLink" href="" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:12px 24px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 12px rgba(245,158,11,.3);cursor:grab">
+          🔖 나라장터 → 입찰분석기
+        </a>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px">← 이 버튼을 즐겨찾기 바에 드래그하세요</div>
+      </div>
+
+      <details style="font-size:12px;color:var(--text-muted)">
+        <summary style="cursor:pointer;font-weight:600;margin-bottom:6px">🔧 수동 설치 (드래그가 안 될 때)</summary>
+        <p style="margin-bottom:6px">새 즐겨찾기를 만들고 URL란에 아래 코드를 전체 복사해서 붙여넣으세요:</p>
+        <textarea id="bookmarkletCode" readonly style="width:100%;height:80px;font-size:10px;font-family:monospace;border:1px solid var(--border);border-radius:6px;padding:8px;resize:none;background:#f8fafc"></textarea>
+        <button class="btn btn-outline" style="font-size:12px;padding:5px 12px;margin-top:6px" onclick="copyBookmarklet()">📋 코드 복사</button>
+      </details>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('bookmarkletModal')">확인</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
