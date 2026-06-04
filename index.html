@@ -844,7 +844,9 @@ body {
       <div class="field">
         <label>투찰금액 (원)</label>
         <input type="text" id="myBid" class="input-yellow input-large"
-          placeholder="금액 입력" oninput="fmtWon(this); recalcAll()" onblur="fmtWon(this)">
+          placeholder="금액 입력 (사정률 입력 시 자동계산)"
+          oninput="fmtWon(this); _skipMyBidAutoCalc=true; recalcAll(); _skipMyBidAutoCalc=false;"
+          onblur="fmtWon(this)">
         <div class="korean-amt" id="myBidKorean" style="display:none">
           <div class="ka-short" id="myBidKoreanShort"></div>
           <div class="ka-words" id="myBidKoreanWords"></div>
@@ -1210,7 +1212,14 @@ function switchTab(id, btn) {
 function recalcAll() {
   const base = parseWon(document.getElementById('baseAmt').value);
   const minRatePct = parseFloat(document.getElementById('minRate').value) || 0;
-  const adjRatePct = parseFloat(document.getElementById('adjRate').value) || 100;
+  const adjRatePct = parseFloat(document.getElementById('adjRate').value) || 0;
+
+  // 기초금액 + 사정률 입력 시 → 내 투찰금액 자동 계산
+  if (!_skipMyBidAutoCalc && base > 0 && adjRatePct > 0) {
+    const autoAmt = Math.round(base * adjRatePct / 100);
+    document.getElementById('myBid').value = autoAmt.toLocaleString('ko-KR');
+  }
+
   const myBid = parseWon(document.getElementById('myBid').value);
 
   const minRate = minRatePct / 100;
@@ -1341,6 +1350,7 @@ function buildCompTable() {
 }
 
 let _currentStrategy = 'optimal'; // safe | optimal | aggressive
+let _skipMyBidAutoCalc = false;   // 내 투찰금액 직접 입력 시 자동계산 방지 플래그
 
 function setStrategy(s, btn) {
   _currentStrategy = s;
