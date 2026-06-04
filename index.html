@@ -592,6 +592,51 @@ body {
 .parse-row span:first-child { font-weight: 600; color: var(--text); min-width: 160px; }
 .parse-row span:last-child { color: var(--primary-dark); font-weight: 700; }
 
+/* ─── 추천 전략 버튼 ─── */
+.rec-strategy-row { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+.rec-strategy-btn {
+  flex:1; min-width:110px; padding:10px 8px; border-radius:8px;
+  border:2px solid var(--border); background:#f8fafc;
+  cursor:pointer; text-align:center; transition:all .15s; font-family:inherit;
+}
+.rec-strategy-btn:hover { border-color:#93c5fd; background:var(--primary-light); }
+.rec-strategy-btn.active { border-color:var(--primary); background:var(--primary-light); }
+.rec-strategy-btn .rst { font-size:13px; font-weight:700; }
+.rec-strategy-btn .rsd { font-size:11px; color:var(--text-muted); margin-top:3px; }
+.rec-strategy-btn.active .rst { color:var(--primary-dark); }
+.rec-strategy-btn.s-safe.active { border-color:var(--success); background:var(--success-light); }
+.rec-strategy-btn.s-safe.active .rst { color:var(--success); }
+.rec-strategy-btn.s-agg.active { border-color:var(--danger); background:var(--danger-light); }
+.rec-strategy-btn.s-agg.active .rst { color:var(--danger); }
+
+/* ─── 사정률 분포 바 ─── */
+.rate-dist-wrap { margin-top:12px; }
+.rate-bar-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; font-size:12px; }
+.rate-bar-label { width:58px; text-align:right; color:var(--text-muted); font-variant-numeric:tabular-nums; }
+.rate-bar-track { flex:1; background:#e2e8f0; border-radius:4px; height:20px; overflow:hidden; }
+.rate-bar-fill { height:100%; border-radius:4px; display:flex; align-items:center;
+  justify-content:flex-end; padding-right:6px; font-size:11px; font-weight:700; color:#fff;
+  transition:width .35s; min-width:2px; }
+.rate-bar-cnt { width:28px; text-align:left; font-weight:700; color:var(--text); }
+
+/* ─── 추첨 빈도 그리드 ─── */
+.freq-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:14px 0; }
+.freq-item label { display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px; text-align:center; }
+.freq-item input {
+  width:100%; padding:8px 4px; text-align:center; border:1px solid var(--border);
+  border-radius:6px; font-size:16px; font-weight:700; background:#f8fafc; font-family:inherit;
+}
+.freq-item input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 2px rgba(26,86,219,.1); }
+.freq-item.top4 input { background:var(--warning-light); border-color:var(--warning); color:var(--warning); }
+.freq-item.top4 label { color:var(--warning); }
+.freq-result-box { background:linear-gradient(135deg,#fef3c7,#fffbeb); border:2px solid var(--warning);
+  border-radius:12px; padding:16px 20px; margin-top:14px; }
+.freq-result-box h4 { font-size:13px; color:var(--warning); margin-bottom:10px; }
+.freq-result-row { display:flex; justify-content:space-between; padding:4px 0;
+  font-size:13px; border-bottom:1px solid #fde68a; }
+.freq-result-row:last-child { border-bottom:none; }
+.freq-result-row span:last-child { font-weight:700; color:#92400e; }
+
 /* ─── Responsive ─── */
 @media (max-width: 480px) {
   .card { padding: 14px; }
@@ -762,11 +807,12 @@ body {
         <thead>
           <tr>
             <th style="width:50px">순위</th>
-            <th style="min-width:150px">업체명</th>
-            <th style="min-width:150px">입찰금액 (원)</th>
-            <th style="width:90px">투찰률</th>
-            <th style="width:90px">사정률차이</th>
-            <th style="width:80px">결과</th>
+            <th style="min-width:140px">업체명</th>
+            <th style="min-width:140px">입찰금액 (원)</th>
+            <th style="width:80px">추첨번호</th>
+            <th style="width:82px">사정률(%)</th>
+            <th style="width:82px">하한 차이</th>
+            <th style="width:76px">결과</th>
           </tr>
         </thead>
         <tbody id="compBody"></tbody>
@@ -777,24 +823,49 @@ body {
   <div class="card">
     <div class="card-title"><span class="icon">📊</span> 경쟁업체 패턴 분석</div>
 
+    <!-- 추천 투찰금액 3전략 -->
+    <div style="margin-bottom:6px;font-size:12px;font-weight:700;color:var(--text-muted)">💡 추천 투찰금액 전략 선택</div>
+    <div class="rec-strategy-row">
+      <button class="rec-strategy-btn s-safe" onclick="setStrategy('safe',this)">
+        <div class="rst">🛡 안전형</div>
+        <div class="rsd">낙찰하한 +1%p<br>최소 자격 확보</div>
+      </button>
+      <button class="rec-strategy-btn active" onclick="setStrategy('optimal',this)">
+        <div class="rst">⚖️ 적정형</div>
+        <div class="rsd">경쟁사 평균 사정률<br>균형 전략</div>
+      </button>
+      <button class="rec-strategy-btn s-agg" onclick="setStrategy('aggressive',this)">
+        <div class="rst">⚔️ 공격형</div>
+        <div class="rsd">정상최저 99.95%<br>최저가 우선</div>
+      </button>
+    </div>
     <div class="recommend-box">
-      <div class="recommend-label">💡 추천 투찰금액 (정상업체 최저의 99.95%)</div>
+      <div class="recommend-label" id="recStratLabel">⚖️ 적정형 — 경쟁사 평균 사정률 기반</div>
       <div class="recommend-value" id="recommendAmt">-</div>
       <div class="recommend-desc" id="recommendDesc">경쟁업체 데이터를 입력하면 자동 계산됩니다</div>
     </div>
 
+    <!-- 사정률 중심 통계 -->
     <div class="pattern-grid">
       <div class="pattern-item">
-        <div class="pattern-label">평균 입찰금액</div>
-        <div class="pattern-value" id="p_avg">-</div>
+        <div class="pattern-label">평균 사정률</div>
+        <div class="pattern-value" id="p_avgRate">-</div>
       </div>
       <div class="pattern-item">
-        <div class="pattern-label">최소 입찰금액</div>
-        <div class="pattern-value" id="p_min">-</div>
+        <div class="pattern-label">최저 사정률</div>
+        <div class="pattern-value" id="p_minRate" style="color:var(--danger)">-</div>
       </div>
       <div class="pattern-item">
-        <div class="pattern-label">최대 입찰금액</div>
-        <div class="pattern-value" id="p_max">-</div>
+        <div class="pattern-label">최고 사정률</div>
+        <div class="pattern-value" id="p_maxRate" style="color:var(--primary)">-</div>
+      </div>
+      <div class="pattern-item">
+        <div class="pattern-label">사정률 표준편차</div>
+        <div class="pattern-value" id="p_stdRate">-</div>
+      </div>
+      <div class="pattern-item">
+        <div class="pattern-label">최빈 사정률 구간</div>
+        <div class="pattern-value" id="p_modeRange">-</div>
       </div>
       <div class="pattern-item">
         <div class="pattern-label">정상 업체 수</div>
@@ -805,20 +876,15 @@ body {
         <div class="pattern-value" id="p_below" style="color:var(--danger)">-</div>
       </div>
       <div class="pattern-item">
-        <div class="pattern-label">초과 업체 수</div>
-        <div class="pattern-value" id="p_over" style="color:var(--warning)">-</div>
-      </div>
-      <div class="pattern-item">
         <div class="pattern-label">참여사 수</div>
         <div class="pattern-value" id="p_total">-</div>
       </div>
-      <div class="pattern-item">
-        <div class="pattern-label">정상업체 최저금액</div>
-        <div class="pattern-value" id="p_normalMin">-</div>
-      </div>
     </div>
 
-    <div class="chart-wrap"><canvas id="compChart"></canvas></div>
+    <!-- 사정률 분포 히스토그램 -->
+    <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px;margin-top:4px">📊 사정률 구간 분포</div>
+    <div class="rate-dist-wrap" id="rateDistWrap"></div>
+    <div class="chart-wrap" style="height:180px;margin-top:14px"><canvas id="compChart"></canvas></div>
   </div>
 
 </section>
@@ -885,6 +951,23 @@ body {
      탭 4: 예정가격 시뮬레이션
 ═══════════════════════════════════════ -->
 <section id="t4" class="tab-content">
+
+  <!-- 추첨 빈도 반영 카드 -->
+  <div class="card">
+    <div class="card-title"><span class="icon">🎯</span> 실제 추첨 빈도 반영 — 정밀 예정가격 예측</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.7">
+      개찰결과에 표시된 <strong>추첨번호</strong>를 입력하면 가장 많이 선택된 4개 번호로 예정가격을 산출합니다.<br>
+      경쟁업체 탭에 추첨번호를 입력했다면 <strong>자동 계산</strong> 버튼을 누르면 됩니다.
+    </p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="importFreqFromComp()">🔄 경쟁업체 추첨번호 자동 계산</button>
+      <button class="btn btn-outline" onclick="calcFreqBasedPrice()">📊 빈도 기반 예정가격 산출</button>
+      <button class="btn btn-outline" onclick="clearFreq()">🗑 초기화</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">번호 1~15별 선택 횟수 입력 (상위 4개 번호 자동 강조)</div>
+    <div class="freq-grid" id="freqGrid"></div>
+    <div id="freqResult"></div>
+  </div>
 
   <div class="card">
     <div class="card-title"><span class="icon">🎲</span> KONEPS 예비가격 시뮬레이션</div>
@@ -1050,12 +1133,24 @@ function buildCompTable() {
       <td><input type="text" id="cr_name_${i}" placeholder="업체명 입력" oninput="recalcCompetitors()"></td>
       <td><input type="text" id="cr_amt_${i}" placeholder="0" class="won-input"
         oninput="fmtWon(this);recalcCompetitors()" onblur="fmtWon(this)"></td>
+      <td><input type="text" id="cr_num_${i}" placeholder="예) 14 09"
+        style="width:80px;font-size:12px;text-align:center;background:var(--input-yellow);border-color:var(--input-yellow-border)"
+        oninput="recalcCompetitors()"></td>
       <td id="cr_rate_${i}" style="text-align:right">-</td>
       <td id="cr_diff_${i}" style="text-align:right">-</td>
       <td id="cr_status_${i}" style="text-align:center"><span class="badge badge-empty">-</span></td>
     `;
     tbody.appendChild(tr);
   }
+}
+
+let _currentStrategy = 'optimal'; // safe | optimal | aggressive
+
+function setStrategy(s, btn) {
+  _currentStrategy = s;
+  document.querySelectorAll('.rec-strategy-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  recalcCompetitors();
 }
 
 function recalcCompetitors() {
@@ -1085,59 +1180,142 @@ function recalcCompetitors() {
   normalEntries.forEach((e, idx) => { e.rank = idx + 1; });
 
   entries.forEach(e => {
-    const rank = e.rank ?? null;
-    const r_rank = document.getElementById(`cr_rank_${e.i}`);
-    const r_rate = document.getElementById(`cr_rate_${e.i}`);
-    const r_diff = document.getElementById(`cr_diff_${e.i}`);
+    const r_rank   = document.getElementById(`cr_rank_${e.i}`);
+    const r_rate   = document.getElementById(`cr_rate_${e.i}`);
+    const r_diff   = document.getElementById(`cr_diff_${e.i}`);
     const r_status = document.getElementById(`cr_status_${e.i}`);
-
     if (e.status === 'empty') {
-      r_rank.textContent = '-';
-      r_rate.textContent = '-';
+      r_rank.textContent = '-'; r_rate.textContent = '-';
       r_diff.textContent = '-';
       r_status.innerHTML = '<span class="badge badge-empty">-</span>';
     } else {
-      r_rank.innerHTML = rank ? `<span class="rank-num">${rank}</span>` : '-';
+      r_rank.innerHTML = e.rank ? `<span class="rank-num">${e.rank}</span>` : '-';
       r_rate.textContent = pct(e.rate);
-      r_diff.textContent = base > 0 ? pct(e.rate - minRate, 3) : '-';
-      if (e.status === 'ok') r_status.innerHTML = '<span class="badge badge-ok">정상</span>';
+      r_diff.textContent = base > 0 ? (e.rate - minRate >= 0 ? '+' : '') + pct(e.rate - minRate, 3) : '-';
+      if (e.status === 'ok')    r_status.innerHTML = '<span class="badge badge-ok">정상</span>';
       else if (e.status === 'below') r_status.innerHTML = '<span class="badge badge-fail">미달</span>';
-      else r_status.innerHTML = '<span class="badge badge-over">초과</span>';
+      else                      r_status.innerHTML = '<span class="badge badge-over">초과</span>';
     }
   });
 
-  // 패턴 분석
-  const valid = entries.filter(e => e.amt > 0);
+  // ── 사정률 통계 ──
+  const valid  = entries.filter(e => e.amt > 0);
   const normal = entries.filter(e => e.status === 'ok');
-  const below = entries.filter(e => e.status === 'below');
-  const over = entries.filter(e => e.status === 'over');
+  const below  = entries.filter(e => e.status === 'below');
+  const allRates = valid.map(e => e.rate);
+  const normRates = normal.map(e => e.rate);
 
-  document.getElementById('p_total').textContent = valid.length || '-';
+  document.getElementById('p_total').textContent  = valid.length  || '-';
   document.getElementById('p_normal').textContent = normal.length || (valid.length ? '0' : '-');
-  document.getElementById('p_below').textContent = below.length || (valid.length ? '0' : '-');
-  document.getElementById('p_over').textContent = over.length || (valid.length ? '0' : '-');
+  document.getElementById('p_below').textContent  = below.length  || (valid.length ? '0' : '-');
 
-  if (valid.length > 0) {
-    const amts = valid.map(e => e.amt);
-    document.getElementById('p_avg').textContent = won(amts.reduce((s,v)=>s+v,0)/amts.length);
-    document.getElementById('p_min').textContent = won(Math.min(...amts));
-    document.getElementById('p_max').textContent = won(Math.max(...amts));
+  if (allRates.length > 0) {
+    const avgRate = allRates.reduce((s,v)=>s+v,0) / allRates.length;
+    const minR = Math.min(...allRates), maxR = Math.max(...allRates);
+    const variance = allRates.reduce((s,v)=>s+(v-avgRate)**2,0) / allRates.length;
+    const stdR = Math.sqrt(variance);
+
+    document.getElementById('p_avgRate').textContent = pct(avgRate);
+    document.getElementById('p_minRate').textContent = pct(minR);
+    document.getElementById('p_maxRate').textContent = pct(maxR);
+    document.getElementById('p_stdRate').textContent = '±' + pct(stdR);
+
+    // 최빈 구간 (0.5%p 단위 빈도)
+    const bins = {};
+    allRates.forEach(r => {
+      const bin = (Math.floor(r * 200) / 200).toFixed(3);
+      bins[bin] = (bins[bin] || 0) + 1;
+    });
+    const modeKey = Object.keys(bins).reduce((a,b) => bins[a]>=bins[b]?a:b);
+    const modePct1 = (parseFloat(modeKey)*100).toFixed(2);
+    const modePct2 = ((parseFloat(modeKey)+0.005)*100).toFixed(2);
+    document.getElementById('p_modeRange').textContent = `${modePct1}~${modePct2}%`;
+
+    // 사정률 분포 바
+    renderRateDist(allRates, minRate);
   } else {
-    ['p_avg','p_min','p_max'].forEach(id => document.getElementById(id).textContent = '-');
+    ['p_avgRate','p_minRate','p_maxRate','p_stdRate','p_modeRange'].forEach(id =>
+      document.getElementById(id).textContent = '-');
+    document.getElementById('rateDistWrap').innerHTML = '';
   }
 
-  if (normal.length > 0) {
-    const normalMin = Math.min(...normal.map(e => e.amt));
-    document.getElementById('p_normalMin').textContent = won(normalMin);
-    const rec = ceilTo(normalMin * 0.9995, 1000);
-    document.getElementById('recommendAmt').textContent = won(rec);
-    document.getElementById('recommendDesc').textContent =
-      `정상업체 최저 ${won(normalMin)} × 99.95% = ${won(normalMin * 0.9995)} → 1,000원 단위 올림`;
-  } else {
-    document.getElementById('p_normalMin').textContent = '-';
-    document.getElementById('recommendAmt').textContent = '-';
-    document.getElementById('recommendDesc').textContent = '정상 업체 데이터를 입력하면 자동 계산됩니다';
+  // ── 3전략 추천 금액 ──
+  let recAmt = null, recLabel = '', recDesc = '';
+
+  if (base > 0) {
+    const normalMin = normal.length > 0 ? Math.min(...normal.map(e=>e.amt)) : null;
+    const avgNormRate = normRates.length > 0 ? normRates.reduce((s,v)=>s+v,0)/normRates.length : null;
+
+    if (_currentStrategy === 'safe') {
+      recAmt  = ceilTo(base * (minRate + 0.01), 1000);
+      recLabel = '🛡 안전형 — 낙찰하한 +1%p 기준';
+      recDesc  = `기초금액 × (낙찰하한률 ${pct(minRate)} + 1%p) = 기초금액 × ${pct(minRate+0.01)} → 1,000원 단위 올림`;
+    } else if (_currentStrategy === 'optimal') {
+      if (avgNormRate !== null) {
+        recAmt  = ceilTo(base * avgNormRate, 1000);
+        recLabel = '⚖️ 적정형 — 정상업체 평균 사정률 기준';
+        recDesc  = `정상업체 평균 사정률 ${pct(avgNormRate)} × 기초금액 ${won(base)} → 1,000원 단위 올림`;
+      } else {
+        recLabel = '⚖️ 적정형 — 정상업체 평균 사정률 기준';
+        recDesc  = '정상업체 데이터를 입력하면 계산됩니다';
+      }
+    } else { // aggressive
+      if (normalMin !== null) {
+        recAmt  = ceilTo(normalMin * 0.9995, 1000);
+        recLabel = '⚔️ 공격형 — 정상업체 최저의 99.95%';
+        recDesc  = `정상업체 최저 ${won(normalMin)} × 99.95% = ${won(normalMin*0.9995)} → 1,000원 단위 올림`;
+      } else {
+        recLabel = '⚔️ 공격형 — 정상업체 최저의 99.95%';
+        recDesc  = '정상업체 데이터를 입력하면 계산됩니다';
+      }
+    }
   }
+
+  document.getElementById('recStratLabel').textContent = recLabel;
+  document.getElementById('recommendAmt').textContent  = recAmt ? won(recAmt) : '-';
+  document.getElementById('recommendDesc').textContent = recDesc || '기초금액과 경쟁업체 데이터를 입력하세요';
+}
+
+function renderRateDist(rates, minRate) {
+  if (rates.length === 0) { document.getElementById('rateDistWrap').innerHTML = ''; return; }
+
+  // 0.5%p 단위 빈 생성
+  const step = 0.005;
+  const minR = Math.min(...rates) - step;
+  const maxR = Math.max(...rates) + step;
+  const bins = {};
+  for (let r = Math.floor(minR/step)*step; r <= maxR; r += step) {
+    const k = r.toFixed(3);
+    bins[k] = 0;
+  }
+  rates.forEach(r => {
+    const k = (Math.floor(r/step)*step).toFixed(3);
+    if (bins[k] !== undefined) bins[k]++;
+    else bins[k] = 1;
+  });
+
+  const keys = Object.keys(bins).sort();
+  const maxCnt = Math.max(...Object.values(bins), 1);
+  const colors = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#84cc16','#f97316'];
+
+  let html = '';
+  keys.filter(k => bins[k] > 0).forEach((k, idx) => {
+    const cnt = bins[k];
+    const r   = parseFloat(k);
+    const w   = Math.max(4, (cnt/maxCnt)*100);
+    const isAboveMin = r >= minRate;
+    const color = isAboveMin ? colors[idx % colors.length] : '#ef4444';
+    const labelPct = (r*100).toFixed(2);
+    html += `
+      <div class="rate-bar-row">
+        <span class="rate-bar-label">${labelPct}%</span>
+        <div class="rate-bar-track">
+          <div class="rate-bar-fill" style="width:${w}%;background:${color}">${cnt > 1 ? cnt+'개' : ''}</div>
+        </div>
+        <span class="rate-bar-cnt">${cnt}개</span>
+      </div>`;
+  });
+  document.getElementById('rateDistWrap').innerHTML = html;
 }
 
 // Chart.js 인스턴스
@@ -1148,54 +1326,75 @@ function renderCompetitorChart() {
   const minRatePct = parseFloat(document.getElementById('minRate').value) || 0;
   const minRate = minRatePct / 100;
 
-  const labels = [], colors = [], amounts = [];
+  const labels = [], rateData = [], colors = [];
   for (let i = 0; i < COMP_ROWS; i++) {
     const name = document.getElementById(`cr_name_${i}`).value.trim() || `업체${i+1}`;
-    const amt = parseWon(document.getElementById(`cr_amt_${i}`).value);
-    if (amt > 0) {
-      labels.push(name);
-      amounts.push(amt);
-      let rate = base > 0 ? amt / base : 0;
-      if (amt > base) colors.push('#f59e0b88');
-      else if (rate < minRate) colors.push('#ef444488');
-      else colors.push('#22c55e88');
+    const amt  = parseWon(document.getElementById(`cr_amt_${i}`).value);
+    if (amt > 0 && base > 0) {
+      const rate = amt / base;
+      labels.push(name.length > 8 ? name.slice(0,8)+'…' : name);
+      rateData.push(parseFloat((rate * 100).toFixed(3)));
+      if (amt > base)        colors.push('rgba(245,158,11,0.7)');
+      else if (rate < minRate) colors.push('rgba(239,68,68,0.7)');
+      else                   colors.push('rgba(34,197,94,0.7)');
     }
   }
 
   const ctx = document.getElementById('compChart').getContext('2d');
   if (compChartInst) compChartInst.destroy();
-  if (amounts.length === 0) return;
+  if (rateData.length === 0) return;
+
+  // 낙찰하한 기준선 데이터
+  const minLine = Array(rateData.length).fill(minRatePct);
 
   compChartInst = new Chart(ctx, {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        label: '입찰금액',
-        data: amounts,
-        backgroundColor: colors,
-        borderColor: colors.map(c => c.replace('88','cc')),
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
+      datasets: [
+        {
+          type: 'bar',
+          label: '사정률(%)',
+          data: rateData,
+          backgroundColor: colors,
+          borderColor: colors.map(c => c.replace('0.7','1')),
+          borderWidth: 1,
+          borderRadius: 3,
+          yAxisID: 'y',
+        },
+        {
+          type: 'line',
+          label: `낙찰하한 ${minRatePct}%`,
+          data: minLine,
+          borderColor: '#dc2626',
+          borderDash: [4,3],
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          yAxisID: 'y',
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: { labels: { font: { size: 11 } } },
         tooltip: {
           callbacks: {
-            label: ctx => won(ctx.raw)
+            label: c => c.dataset.type === 'line'
+              ? `낙찰하한: ${c.raw}%`
+              : `사정률: ${c.raw}%`
           }
         }
       },
       scales: {
         y: {
-          ticks: { callback: v => (v/1e6).toFixed(1)+'M' },
+          title: { display: true, text: '사정률 (%)', font: { size: 11 } },
+          ticks: { callback: v => v+'%' },
           grid: { color: '#f1f5f9' }
         },
-        x: { grid: { display: false } }
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
       }
     }
   });
@@ -1466,7 +1665,8 @@ function saveData() {
   for (let i = 0; i < COMP_ROWS; i++) {
     d.competitors.push({
       name: document.getElementById(`cr_name_${i}`).value,
-      amt: document.getElementById(`cr_amt_${i}`).value,
+      amt:  document.getElementById(`cr_amt_${i}`).value,
+      num:  document.getElementById(`cr_num_${i}`)?.value || '',
     });
   }
 
@@ -1500,7 +1700,9 @@ function loadData() {
   if (d.competitors) {
     d.competitors.forEach((c, i) => {
       document.getElementById(`cr_name_${i}`).value = c.name || '';
-      document.getElementById(`cr_amt_${i}`).value = c.amt || '';
+      document.getElementById(`cr_amt_${i}`).value  = c.amt  || '';
+      if (document.getElementById(`cr_num_${i}`))
+        document.getElementById(`cr_num_${i}`).value = c.num || '';
     });
   }
 
@@ -1531,6 +1733,158 @@ function clearAll() {
 }
 
 // ══════════════════════════════════════════════
+//  탭 4: 추첨 빈도 반영 정밀 예측
+// ══════════════════════════════════════════════
+function buildFreqGrid() {
+  const grid = document.getElementById('freqGrid');
+  if (!grid) return;
+  let html = '';
+  for (let n = 1; n <= 15; n++) {
+    html += `
+      <div class="freq-item" id="fi_${n}">
+        <label>${n}번</label>
+        <input type="number" id="freq_${n}" min="0" max="99" value="0"
+          oninput="onFreqInput()">
+      </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function onFreqInput() {
+  // 상위 4개 번호 강조
+  const vals = [];
+  for (let n = 1; n <= 15; n++) {
+    vals.push({ n, v: parseInt(document.getElementById(`freq_${n}`).value) || 0 });
+  }
+  vals.sort((a,b) => b.v - a.v);
+  const top4 = new Set(vals.slice(0,4).filter(x=>x.v>0).map(x=>x.n));
+  for (let n = 1; n <= 15; n++) {
+    document.getElementById(`fi_${n}`).className = 'freq-item' + (top4.has(n) ? ' top4' : '');
+  }
+}
+
+function importFreqFromComp() {
+  // 경쟁업체 추첨번호에서 빈도 자동 계산
+  const freq = {};
+  for (let n = 1; n <= 15; n++) freq[n] = 0;
+
+  let found = 0;
+  for (let i = 0; i < COMP_ROWS; i++) {
+    const numStr = (document.getElementById(`cr_num_${i}`)?.value || '').trim();
+    if (!numStr) continue;
+    const nums = numStr.match(/\d+/g);
+    if (!nums) continue;
+    nums.forEach(n => {
+      const num = parseInt(n);
+      if (num >= 1 && num <= 15) { freq[num]++; found++; }
+    });
+  }
+
+  if (found === 0) {
+    alert('경쟁업체 탭에서 추첨번호를 먼저 입력해주세요.\n예) 14 09 (띄어쓰기로 구분)');
+    return;
+  }
+
+  for (let n = 1; n <= 15; n++) {
+    document.getElementById(`freq_${n}`).value = freq[n];
+  }
+  onFreqInput();
+  // 탭 4로 이동
+  document.querySelectorAll('.tab-btn')[3].click();
+  setTimeout(calcFreqBasedPrice, 100);
+}
+
+function calcFreqBasedPrice() {
+  const base = parseWon(document.getElementById('baseAmt').value);
+  if (base <= 0) { alert('탭 1에서 기초금액을 먼저 입력하세요.'); return; }
+
+  const freq = [];
+  for (let n = 1; n <= 15; n++) {
+    freq.push({ n, v: parseInt(document.getElementById(`freq_${n}`).value) || 0 });
+  }
+
+  const total = freq.reduce((s,f) => s+f.v, 0);
+  if (total === 0) { alert('번호별 추첨 횟수를 입력하세요.'); return; }
+
+  freq.sort((a,b) => b.v - a.v);
+  const top4 = freq.slice(0,4);
+  const top4nums = top4.map(f=>f.n);
+
+  // 시뮬레이션 첫 번째 시나리오 예비가격 사용 (없으면 랜덤 생성)
+  let prices;
+  if (simPrices.length > 0) {
+    prices = simPrices[0];
+  } else {
+    prices = [];
+    for (let i = 0; i < 15; i++) prices.push(Math.round(base * (1 + (Math.random()*0.06-0.03))));
+  }
+
+  const estPrice = top4nums.reduce((s, n) => s + prices[n-1], 0) / 4;
+  const minRate = (parseFloat(document.getElementById('minRate').value) || 0) / 100;
+  const myBid = parseWon(document.getElementById('myBid').value);
+
+  // 동점 처리: 동점인 경우 가능한 모든 조합
+  const top4val = top4[3].v; // 4위 값
+  const tieCandidates = freq.filter(f => f.v === top4val).map(f=>f.n);
+  const fixedNums = freq.filter(f => f.v > top4val).map(f=>f.n);
+  const needCount = 4 - fixedNums.length;
+
+  const tieCombos = [];
+  if (tieCandidates.length > needCount) {
+    const combos = getCombinations(tieCandidates.length, needCount);
+    combos.forEach(c => {
+      const nums = [...fixedNums, ...c.map(idx => tieCandidates[idx])];
+      tieCombos.push(nums);
+    });
+  } else {
+    tieCombos.push(top4nums);
+  }
+
+  const allEstPrices = tieCombos.map(nums =>
+    nums.reduce((s,n) => s + prices[n-1], 0) / 4
+  );
+  const avgEst = allEstPrices.reduce((s,v)=>s+v,0) / allEstPrices.length;
+  const estMin = Math.min(...allEstPrices);
+  const estMax = Math.max(...allEstPrices);
+
+  let myStatus = '';
+  if (myBid > 0) {
+    if (myBid > avgEst) myStatus = '❌ 예정가격 초과';
+    else if (myBid < avgEst * minRate) myStatus = '❌ 낙찰하한 미달';
+    else myStatus = '✅ 낙찰 가능 구간';
+  }
+
+  // 타이 없으면 확정, 있으면 범위 표시
+  const isTie = tieCombos.length > 1;
+
+  document.getElementById('freqResult').innerHTML = `
+    <div class="freq-result-box">
+      <h4>📊 추첨 빈도 기반 예정가격 산출 결과</h4>
+      <div class="freq-result-row"><span>상위 4개 번호</span>
+        <span>${top4nums.map(n=>`#${n}(${top4.find(f=>f.n===n)?.v}회)`).join(', ')}</span></div>
+      ${isTie ? `<div class="freq-result-row"><span>동점 처리</span>
+        <span>${tieCombos.length}가지 조합 가능</span></div>` : ''}
+      <div class="freq-result-row"><span>예정가격 ${isTie?'범위':'(확정)'}</span>
+        <span>${isTie ? won(estMin)+' ~ '+won(estMax) : won(avgEst)}</span></div>
+      <div class="freq-result-row"><span>예정가격 평균</span><span>${won(avgEst)}</span></div>
+      <div class="freq-result-row"><span>낙찰하한 기준금액</span><span>${won(avgEst * minRate)}</span></div>
+      ${myBid>0 ? `<div class="freq-result-row"><span>내 투찰금액 판정</span><span>${myStatus}</span></div>` : ''}
+      <div class="freq-result-row"><span>사용 예비가격</span>
+        <span style="font-size:11px">${simPrices.length>0?'시뮬레이션 시나리오 1 사용':'랜덤 생성 (시뮬레이션 먼저 생성 권장)'}</span></div>
+    </div>`;
+}
+
+function clearFreq() {
+  for (let n = 1; n <= 15; n++) {
+    if (document.getElementById(`freq_${n}`)) {
+      document.getElementById(`freq_${n}`).value = 0;
+      document.getElementById(`fi_${n}`).className = 'freq-item';
+    }
+  }
+  document.getElementById('freqResult').innerHTML = '';
+}
+
+// ══════════════════════════════════════════════
 //  모달 공통
 // ══════════════════════════════════════════════
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -1556,44 +1910,99 @@ function openTextModal() {
 
 function parseTableText(raw) {
   const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+  if (lines.length === 0) return [];
+
+  // ── 구분자 자동 감지 (탭 > 콤마 > 공백 순) ──
+  const sampleLine = lines.find(l => l.includes('\t') || l.split(',').length > 3) || lines[0];
+  const delim = sampleLine.includes('\t') ? '\t' : sampleLine.split(',').length > 3 ? ',' : null;
+
+  // ── 헤더 행에서 컬럼 인덱스 자동 탐지 ──
+  let nameIdx = -1, amtIdx = -1, numIdx = -1, headerRow = -1;
+  for (let i = 0; i < Math.min(5, lines.length); i++) {
+    const cells = delim ? lines[i].split(delim) : [lines[i]];
+    cells.forEach((c, j) => {
+      const t = c.replace(/\s/g,'');
+      if (t.includes('업체명') || t.includes('회사명') || t.includes('상호명')) nameIdx = j;
+      if (t.includes('입찰금액') || t.includes('투찰금액') || t.includes('낙찰금액')) amtIdx = j;
+      if (t.includes('추첨번호') || t.includes('번호')) numIdx = j;
+    });
+    if (nameIdx >= 0 || amtIdx >= 0) { headerRow = i; break; }
+  }
+
   const results = [];
   const seen = new Set();
+  const startRow = headerRow >= 0 ? headerRow + 1 : 0;
 
-  for (const line of lines) {
-    // 헤더 줄 건너뛰기
-    if (/업체명|사업자등록|순위|입찰금액/.test(line)) continue;
+  for (let li = startRow; li < lines.length; li++) {
+    const line = lines[li];
+    if (/업체명|사업자등록|순위.*업체|입찰금액.*투찰/.test(line)) continue;
 
-    // 탭 구분 파싱 (나라장터 표 복사 기본 형식)
-    const cells = line.split('\t');
-    if (cells.length >= 5) {
-      const name = cells[2]?.trim().replace(/\s+/g, '');
-      const amtRaw = cells[4]?.trim().replace(/[,원\s]/g, '');
-      const amount = parseInt(amtRaw);
-      if (name && name.length >= 2 && amount > 1_000_000 && !seen.has(name)) {
-        seen.add(name);
-        results.push({ name, amount });
-        continue;
+    let name = '', amount = 0, drawNum = '';
+
+    if (delim) {
+      const cells = line.split(delim);
+
+      // 탐지된 인덱스 우선 사용
+      if (nameIdx >= 0 && cells[nameIdx]) name = cells[nameIdx].trim();
+      if (amtIdx  >= 0 && cells[amtIdx])  amount = parseInt(cells[amtIdx].replace(/[,원\s]/g,''));
+      if (numIdx  >= 0 && cells[numIdx])  drawNum = cells[numIdx].trim();
+
+      // 인덱스 미탐지 시 위치 기반 파싱
+      if ((!name || !amount) && cells.length >= 5) {
+        name   = name   || cells[2]?.trim();
+        amount = amount || parseInt((cells[4]||'').replace(/[,원\s]/g,''));
+        drawNum= drawNum|| (cells[7]?.trim() || '');
       }
-    }
 
-    // 폴백: 줄에서 큰 숫자 + 한글 업체명 추출
-    const amtMatch = line.match(/\b(\d{1,3}(?:,\d{3})+|\d{7,10})\b/g);
-    const korMatch  = line.match(/[가-힣(주)()㈜\w]{2,20}(?:주식회사|㈜|\(주\)|TECH|tech)?/g);
-    if (amtMatch && korMatch) {
-      for (const a of amtMatch) {
-        const amount = parseInt(a.replace(/,/g, ''));
-        if (amount > 10_000_000 && amount < 1_000_000_000_000) {
-          const name = korMatch.find(k => /[가-힣]/.test(k) && k.length >= 2) || '';
-          if (name && !seen.has(name)) {
-            seen.add(name);
-            results.push({ name, amount });
-          }
-          break;
+      // 추가 폴백: 셀에서 큰 숫자 찾기
+      if (!amount) {
+        for (const c of cells) {
+          const n = parseInt(c.replace(/[,원\s]/g,''));
+          if (n > 5_000_000 && n < 1_000_000_000_000) { amount = n; break; }
         }
       }
+      if (!name) {
+        const korCell = cells.find(c => /[가-힣]{2,}/.test(c) && c.trim().length >= 2 && c.trim().length <= 40);
+        name = korCell?.trim() || '';
+      }
+    } else {
+      // 비구분 폴백: 정규식으로 직접 추출
+      const amtM = line.match(/\b(\d{1,3}(?:,\d{3}){2,})\b/g);
+      const korM = line.match(/[가-힣()（）㈜\w]{2,30}/g);
+      if (amtM) amount = parseInt(amtM[0].replace(/,/g,''));
+      if (korM) name = korM.find(k => /[가-힣]{2,}/.test(k)) || '';
+    }
+
+    name = name.replace(/\s+/g,'').replace(/^\d+$/, ''); // 순위 숫자만인 경우 제거
+    if (name && name.length >= 2 && amount > 1_000_000 && !seen.has(name)) {
+      seen.add(name);
+      results.push({ name, amount, drawNum });
     }
   }
   return results;
+}
+
+// populateCompetitors 도 drawNum 반영
+function populateCompetitors(data) {
+  for (let i = 0; i < COMP_ROWS; i++) {
+    document.getElementById(`cr_name_${i}`).value = '';
+    document.getElementById(`cr_amt_${i}`).value  = '';
+    if (document.getElementById(`cr_num_${i}`)) document.getElementById(`cr_num_${i}`).value = '';
+  }
+  const limit = Math.min(data.length, COMP_ROWS);
+  for (let i = 0; i < limit; i++) {
+    document.getElementById(`cr_name_${i}`).value = data[i].name;
+    document.getElementById(`cr_amt_${i}`).value  = data[i].amount.toLocaleString('ko-KR');
+    if (document.getElementById(`cr_num_${i}`) && data[i].drawNum)
+      document.getElementById(`cr_num_${i}`).value = data[i].drawNum;
+  }
+  recalcCompetitors();
+  renderCompetitorChart();
+
+  const badge = document.getElementById('importBadge');
+  badge.textContent = `✅ ${limit}개 업체 자동 입력됨`;
+  badge.style.display = 'inline';
+  setTimeout(() => { badge.style.display = 'none'; }, 5000);
 }
 
 let _parsedData = [];
@@ -1622,30 +2031,6 @@ function applyParsed() {
   closeModal('textModal');
   // 탭 2로 이동
   document.querySelectorAll('.tab-btn')[1].click();
-}
-
-// ══════════════════════════════════════════════
-//  경쟁업체 테이블 자동 채우기 (공통)
-// ══════════════════════════════════════════════
-function populateCompetitors(data) {
-  // 기존 데이터 지우기
-  for (let i = 0; i < COMP_ROWS; i++) {
-    document.getElementById(`cr_name_${i}`).value = '';
-    document.getElementById(`cr_amt_${i}`).value = '';
-  }
-  // 최대 COMP_ROWS 개만 채우기
-  const limit = Math.min(data.length, COMP_ROWS);
-  for (let i = 0; i < limit; i++) {
-    document.getElementById(`cr_name_${i}`).value = data[i].name;
-    document.getElementById(`cr_amt_${i}`).value = data[i].amount.toLocaleString('ko-KR');
-  }
-  recalcCompetitors();
-  renderCompetitorChart();
-
-  const badge = document.getElementById('importBadge');
-  badge.textContent = `✅ ${limit}개 업체 자동 입력됨`;
-  badge.style.display = 'inline';
-  setTimeout(() => { badge.style.display = 'none'; }, 5000);
 }
 
 // ══════════════════════════════════════════════
@@ -1723,6 +2108,7 @@ function checkHashImport() {
 (function init() {
   buildCompTable();
   buildMonthlyTable();
+  buildFreqGrid();
 
   // 북마클릿 해시 임포트 (저장 데이터보다 우선)
   if (location.hash.startsWith('#import=')) {
