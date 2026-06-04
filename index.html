@@ -1200,7 +1200,7 @@ function switchTab(id, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
-  if (id === 't2') renderCompetitorChart();
+  if (id === 't2') { recalcCompetitors(); renderCompetitorChart(); }
   if (id === 't3') renderMonthlyChart();
   if (id === 't4') updateSimProbability();
   if (id === 't5') { renderArchiveChips(); renderArchiveContent(); }
@@ -1210,6 +1210,12 @@ function switchTab(id, btn) {
 //  탭 1: 입찰 분석 계산
 // ══════════════════════════════════════════════
 function recalcAll() {
+  if (_recalcRunning) return;   // 재진입 방지
+  _recalcRunning = true;
+  try { _recalcAllBody(); } finally { _recalcRunning = false; }
+}
+
+function _recalcAllBody() {
   const base = parseWon(document.getElementById('baseAmt').value);
   const minRatePct = parseFloat(document.getElementById('minRate').value) || 0;
   const adjRatePct = parseFloat(document.getElementById('adjRate').value) || 0;
@@ -1318,9 +1324,10 @@ function recalcAll() {
     document.getElementById('gLabel1').textContent = won(rangeHigh);
   }
 
-  // 경쟁업체 탭도 재계산
-  recalcCompetitors();
-  updateSimProbability();
+  // 탭2가 활성일 때만 경쟁업체 재계산 (성능)
+  if (document.getElementById('t2')?.classList.contains('active')) recalcCompetitors();
+  // 탭4가 활성일 때만 시뮬레이션 확률 갱신 (성능)
+  if (document.getElementById('t4')?.classList.contains('active')) updateSimProbability();
   autoSave();
 }
 
@@ -1352,6 +1359,7 @@ function buildCompTable() {
 
 let _currentStrategy = 'optimal'; // safe | optimal | aggressive
 let _skipMyBidAutoCalc = false;   // 내 투찰금액 직접 입력 시 자동계산 방지 플래그
+let _recalcRunning = false;       // recalcAll 재진입 방지 가드
 
 function setStrategy(s, btn) {
   _currentStrategy = s;
