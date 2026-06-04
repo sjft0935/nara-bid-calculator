@@ -844,7 +844,7 @@ body {
       <div class="field">
         <label>투찰금액 (원)</label>
         <input type="text" id="myBid" class="input-yellow input-large"
-          placeholder="금액 입력 (사정률 입력 시 자동계산)"
+          placeholder="기초금액 × 사정률 × 낙찰하한률 자동계산"
           oninput="fmtWon(this); _skipMyBidAutoCalc=true; recalcAll(); _skipMyBidAutoCalc=false;"
           onblur="fmtWon(this)">
         <div class="korean-amt" id="myBidKorean" style="display:none">
@@ -1214,9 +1214,10 @@ function recalcAll() {
   const minRatePct = parseFloat(document.getElementById('minRate').value) || 0;
   const adjRatePct = parseFloat(document.getElementById('adjRate').value) || 0;
 
-  // 기초금액 + 사정률 입력 시 → 내 투찰금액 자동 계산
-  if (!_skipMyBidAutoCalc && base > 0 && adjRatePct > 0) {
-    const autoAmt = Math.round(base * adjRatePct / 100);
+  // 기초금액 + 사정률 + 낙찰하한률 입력 시 → 내 투찰금액 자동 계산
+  // 공식: 투찰금액 = 기초금액 × 사정률(%) × 낙찰하한률(%)
+  if (!_skipMyBidAutoCalc && base > 0 && adjRatePct > 0 && minRatePct > 0) {
+    const autoAmt = Math.round(base * (adjRatePct / 100) * (minRatePct / 100));
     document.getElementById('myBid').value = autoAmt.toLocaleString('ko-KR');
   }
 
