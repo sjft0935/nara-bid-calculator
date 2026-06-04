@@ -637,6 +637,119 @@ body {
 .freq-result-row:last-child { border-bottom:none; }
 .freq-result-row span:last-child { font-weight:700; color:#92400e; }
 
+/* ─── Korean amount hint ─── */
+.korean-amt {
+  margin-top: 6px;
+  min-height: 36px;
+  padding: 6px 10px;
+  background: #fef9c3;
+  border: 1px solid #fde047;
+  border-radius: 7px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.korean-amt .ka-short { font-weight: 700; color: #92400e; font-size: 15px; }
+.korean-amt .ka-words { color: #78350f; font-size: 12px; margin-top: 1px; }
+
+/* ─── Auto-save indicator ─── */
+#saveStatus.autosaved { color: var(--success); font-weight: 600; }
+
+/* ─── Archive Tab ─── */
+.archive-toolbar {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;
+}
+.archive-toolbar input[type="text"] {
+  flex: 1; min-width: 180px; padding: 9px 12px; border: 1px solid var(--border);
+  border-radius: 8px; font-size: 14px; font-family: inherit;
+}
+.archive-toolbar input[type="text"]:focus {
+  outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,86,219,.1);
+}
+.project-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.project-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  border: 2px solid var(--border); background: #f8fafc; cursor: pointer;
+  transition: all .15s; user-select: none;
+}
+.project-chip:hover { border-color: var(--primary); background: var(--primary-light); }
+.project-chip.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); }
+.project-chip .chip-del { font-size: 14px; color: #94a3b8; line-height: 1; }
+.project-chip .chip-del:hover { color: var(--danger); }
+
+.archive-year-list { display: flex; flex-direction: column; gap: 16px; }
+.archive-year-card {
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.archive-year-header {
+  display: flex; align-items: center; gap: 10px;
+  background: linear-gradient(135deg, #1a56db0d, #3b82f610);
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.archive-year-label {
+  font-size: 15px; font-weight: 800; color: var(--primary-dark); flex: 1;
+}
+.archive-year-label input {
+  width: 100px; font-size: 15px; font-weight: 800; color: var(--primary-dark);
+  border: none; background: transparent; border-bottom: 2px solid var(--primary);
+  padding: 2px 4px; font-family: inherit;
+}
+.archive-year-label input:focus { outline: none; }
+.archive-year-body { padding: 12px 16px; background: #fff; }
+.archive-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.archive-table th {
+  background: #f8fafc; padding: 8px 10px; font-size: 11px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: .3px;
+  border-bottom: 2px solid var(--border); text-align: left;
+}
+.archive-table td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.archive-table tr:last-child td { border-bottom: none; }
+.archive-table tr.row-winner td { background: #f0fdf4; }
+.archive-table input[type="text"], .archive-table input[type="number"] {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; font-family: inherit; background: var(--input-yellow);
+  border-color: var(--input-yellow-border);
+}
+.archive-table input:focus { outline: none; border-color: var(--warning); box-shadow: 0 0 0 2px rgba(234,179,8,.15); }
+.archive-table .win-cell { text-align: center; }
+.archive-table input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--success); }
+.archive-add-row-btn {
+  margin-top: 8px; font-size: 12px; padding: 5px 12px; border-radius: 6px;
+  border: 1px dashed var(--border); background: #f8fafc; cursor: pointer;
+  color: var(--text-muted); font-family: inherit;
+}
+.archive-add-row-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.archive-import-btn {
+  font-size: 12px; padding: 6px 12px; border-radius: 6px;
+  border: 1px solid var(--primary); background: var(--primary-light);
+  color: var(--primary-dark); cursor: pointer; font-family: inherit; font-weight: 600;
+}
+.archive-import-btn:hover { background: var(--primary); color: #fff; }
+.archive-del-btn {
+  font-size: 12px; padding: 6px 10px; border-radius: 6px;
+  border: 1px solid #fecaca; background: var(--danger-light);
+  color: var(--danger); cursor: pointer; font-family: inherit;
+}
+.archive-del-btn:hover { background: var(--danger); color: #fff; }
+.archive-row-del { font-size: 16px; cursor: pointer; color: #94a3b8; padding: 0 4px; }
+.archive-row-del:hover { color: var(--danger); }
+.archive-empty {
+  text-align: center; padding: 48px 20px; color: var(--text-muted);
+  font-size: 14px; background: #f8fafc; border-radius: 10px; border: 2px dashed var(--border);
+}
+.archive-empty .ae-icon { font-size: 40px; margin-bottom: 12px; }
+.archive-stats-row {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.archive-stat { font-size: 11px; color: var(--text-muted); }
+.archive-stat strong { color: var(--text); font-weight: 700; }
+.winner-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px;
+  font-weight: 700; background: var(--success-light); color: var(--success);
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 480px) {
   .card { padding: 14px; }
@@ -654,7 +767,7 @@ body {
 </header>
 
 <div class="action-bar">
-  <button class="btn btn-outline" onclick="saveData()">💾 저장</button>
+  <button class="btn btn-outline" onclick="saveData();const s=document.getElementById('saveStatus');s.textContent='💾 저장됨 '+new Date().toLocaleTimeString('ko-KR');s.className='autosaved';setTimeout(()=>{s.textContent='';s.className='';},3000)">💾 저장</button>
   <button class="btn btn-outline" onclick="loadData()">📂 불러오기</button>
   <button class="btn btn-outline" onclick="clearAll()">🗑 초기화</button>
   <span id="saveStatus" style="font-size:12px;color:var(--text-muted);align-self:center;"></span>
@@ -665,6 +778,7 @@ body {
   <button class="tab-btn" onclick="switchTab('t2',this)">🏢 경쟁업체 분석</button>
   <button class="tab-btn" onclick="switchTab('t3',this)">📅 월별 누적 현황</button>
   <button class="tab-btn" onclick="switchTab('t4',this)">🎲 예정가격 시뮬레이션</button>
+  <button class="tab-btn" onclick="switchTab('t5',this)">📚 입찰 아카이브</button>
 </nav>
 
 <!-- ═══════════════════════════════════════
@@ -681,11 +795,11 @@ body {
       </div>
       <div class="field">
         <label>조달기관</label>
-        <input type="text" id="agency" class="input-yellow" placeholder="예: 대구공공시설관리공단" oninput="recalcAll()">
+        <input type="text" id="agency" class="input-yellow" oninput="recalcAll()">
       </div>
       <div class="field">
         <label>기초금액 (원)</label>
-        <input type="text" id="baseAmt" class="input-yellow" placeholder="91,476,000"
+        <input type="text" id="baseAmt" class="input-yellow" placeholder="0"
           oninput="fmtWon(this); recalcAll()" onblur="fmtWon(this)">
       </div>
       <div class="field">
@@ -695,7 +809,7 @@ body {
       </div>
       <div class="field">
         <label>사정률 (%)</label>
-        <input type="number" id="adjRate" class="input-yellow" placeholder="100.81"
+        <input type="number" id="adjRate" class="input-yellow" placeholder="0"
           step="0.001" min="0" oninput="recalcAll()">
       </div>
     </div>
@@ -731,6 +845,10 @@ body {
         <label>투찰금액 (원)</label>
         <input type="text" id="myBid" class="input-yellow input-large"
           placeholder="금액 입력" oninput="fmtWon(this); recalcAll()" onblur="fmtWon(this)">
+        <div class="korean-amt" id="myBidKorean" style="display:none">
+          <div class="ka-short" id="myBidKoreanShort"></div>
+          <div class="ka-words" id="myBidKoreanWords"></div>
+        </div>
       </div>
       <div id="resultBox" class="result-box">
         <div class="result-badge" id="resultBadge" style="color:var(--text-muted)">← 금액을 입력하세요</div>
@@ -991,6 +1109,33 @@ body {
 
 </section>
 
+<!-- ═══════════════════════════════════════
+     탭 5: 입찰 아카이브
+═══════════════════════════════════════ -->
+<section id="t5" class="tab-content">
+
+  <div class="card">
+    <div class="card-title"><span class="icon">📚</span> 입찰 아카이브 — 프로젝트별 연도별 이력 관리</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.8">
+      예: <strong>마포자원회수실</strong> 프로젝트를 추가하면 3년 전·6년 전 등 연도별로 어떤 업체가 입찰·낙찰했고 어떤 추첨번호를 선택했는지 기록합니다.
+    </p>
+
+    <!-- 프로젝트 추가 -->
+    <div class="archive-toolbar">
+      <input type="text" id="archiveNewProject" placeholder="프로젝트명 입력 (예: 마포자원회수실)" maxlength="60"
+        onkeydown="if(event.key==='Enter')addArchiveProject()">
+      <button class="btn btn-primary" onclick="addArchiveProject()" style="white-space:nowrap">+ 프로젝트 추가</button>
+    </div>
+
+    <!-- 프로젝트 칩 목록 -->
+    <div id="archiveProjectChips" class="project-chips"></div>
+  </div>
+
+  <!-- 선택된 프로젝트의 연도별 아카이브 -->
+  <div id="archiveProjectContent"></div>
+
+</section>
+
 <script>
 // ══════════════════════════════════════════════
 //  유틸리티
@@ -998,6 +1143,44 @@ body {
 const won = n => isNaN(n) || n == null ? '-' : Math.round(n).toLocaleString('ko-KR') + '원';
 const pct = (n, d=3) => isNaN(n) || n == null ? '-' : (n*100).toFixed(d) + '%';
 const parseWon = s => { const v = parseFloat(String(s).replace(/[,원\s]/g,'')); return isNaN(v) ? 0 : v; };
+
+function toKoreanAmt(n) {
+  if (!n || isNaN(n) || n <= 0) return '';
+  n = Math.round(n);
+  const eok = Math.floor(n / 1e8);
+  const man = Math.floor((n % 1e8) / 1e4);
+  const rest = n % 1e4;
+  const parts = [];
+  if (eok > 0) parts.push(eok.toLocaleString('ko-KR') + '억');
+  if (man > 0) parts.push(man.toLocaleString('ko-KR') + '만');
+  if (rest > 0) parts.push(rest.toLocaleString('ko-KR'));
+  return parts.join(' ') + ' 원';
+}
+
+function toKoreanWords(n) {
+  if (!n || isNaN(n) || n <= 0) return '';
+  n = Math.round(n);
+  const digits = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'];
+  function grp(num) {
+    if (num === 0) return '';
+    let r = '';
+    const t = Math.floor(num / 1000), b = Math.floor((num % 1000) / 100);
+    const s = Math.floor((num % 100) / 10), o = num % 10;
+    if (t) r += (t === 1 ? '' : digits[t]) + '천';
+    if (b) r += (b === 1 ? '' : digits[b]) + '백';
+    if (s) r += (s === 1 ? '' : digits[s]) + '십';
+    if (o) r += digits[o];
+    return r;
+  }
+  const jo = Math.floor(n / 1e12), eok = Math.floor((n % 1e12) / 1e8);
+  const man = Math.floor((n % 1e8) / 1e4), rest = n % 1e4;
+  let result = '';
+  if (jo)   result += grp(jo)   + '조';
+  if (eok)  result += grp(eok)  + '억';
+  if (man)  result += grp(man)  + '만';
+  if (rest) result += grp(rest);
+  return result + ' 원';
+}
 
 function fmtWon(el) {
   const raw = String(el.value).replace(/[^\d]/g,'');
@@ -1018,6 +1201,7 @@ function switchTab(id, btn) {
   if (id === 't2') renderCompetitorChart();
   if (id === 't3') renderMonthlyChart();
   if (id === 't4') updateSimProbability();
+  if (id === 't5') { renderArchiveChips(); renderArchiveContent(); }
 }
 
 // ══════════════════════════════════════════════
@@ -1056,6 +1240,16 @@ function recalcAll() {
   }
 
   // 내 투찰금액 분석
+  // 한글 금액 표기
+  const koreanBox = document.getElementById('myBidKorean');
+  if (myBid > 0) {
+    document.getElementById('myBidKoreanShort').textContent = toKoreanAmt(myBid);
+    document.getElementById('myBidKoreanWords').textContent = toKoreanWords(myBid);
+    koreanBox.style.display = 'block';
+  } else {
+    koreanBox.style.display = 'none';
+  }
+
   const rb = document.getElementById('resultBox');
   const badge = document.getElementById('resultBadge');
   const details = document.getElementById('resultDetails');
@@ -1068,6 +1262,7 @@ function recalcAll() {
     rb.className = 'result-box';
     gaugeWrap.style.display = 'none';
     document.getElementById('ic_myRate').textContent = '-';
+    autoSave();
     return;
   }
 
@@ -1116,12 +1311,13 @@ function recalcAll() {
   // 경쟁업체 탭도 재계산
   recalcCompetitors();
   updateSimProbability();
+  autoSave();
 }
 
 // ══════════════════════════════════════════════
 //  탭 2: 경쟁업체 분석
 // ══════════════════════════════════════════════
-const COMP_ROWS = 10;
+const COMP_ROWS = 30;
 
 function buildCompTable() {
   const tbody = document.getElementById('compBody');
@@ -1274,6 +1470,7 @@ function recalcCompetitors() {
   document.getElementById('recStratLabel').textContent = recLabel;
   document.getElementById('recommendAmt').textContent  = recAmt ? won(recAmt) : '-';
   document.getElementById('recommendDesc').textContent = recDesc || '기초금액과 경쟁업체 데이터를 입력하세요';
+  autoSave();
 }
 
 function renderRateDist(rates, minRate) {
@@ -1457,6 +1654,7 @@ function recalcMonthly() {
   document.getElementById('s_avgRate').textContent = rateCount ? pct(sumRate/rateCount) : '-';
   document.getElementById('s_avgBase').textContent = total ? won(sumBase/total) : '-';
   document.getElementById('s_avgBid').textContent = total ? won(sumBid/total) : '-';
+  autoSave();
 
   // 차트 업데이트
   const ctx = document.getElementById('monthlyChart').getContext('2d');
@@ -1647,6 +1845,21 @@ function updateSimProbability() {
 }
 
 // ══════════════════════════════════════════════
+//  자동 저장 (디바운스 800ms)
+// ══════════════════════════════════════════════
+let _autoSaveTimer = null;
+function autoSave() {
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(() => {
+    saveData();
+    const s = document.getElementById('saveStatus');
+    s.textContent = '자동 저장됨 ' + new Date().toLocaleTimeString('ko-KR');
+    s.className = 'autosaved';
+    setTimeout(() => { s.textContent = ''; s.className = ''; }, 3000);
+  }, 800);
+}
+
+// ══════════════════════════════════════════════
 //  저장 / 불러오기 / 초기화
 // ══════════════════════════════════════════════
 function saveData() {
@@ -1660,6 +1873,8 @@ function saveData() {
     competitors: [],
     monthly: [],
     simPrices,
+    archives: _archives,
+    currentArchiveProject: _currentArchiveProject,
   };
 
   for (let i = 0; i < COMP_ROWS; i++) {
@@ -1681,8 +1896,6 @@ function saveData() {
   }
 
   localStorage.setItem('narajangteo_v2', JSON.stringify(d));
-  const s = document.getElementById('saveStatus');
-  s.textContent = '저장됨: ' + new Date().toLocaleTimeString('ko-KR');
 }
 
 function loadData() {
@@ -1721,9 +1934,19 @@ function loadData() {
     renderSimTable();
   }
 
+  if (d.archives) {
+    _archives = d.archives;
+    _currentArchiveProject = d.currentArchiveProject || Object.keys(_archives)[0] || null;
+    renderArchiveChips();
+    renderArchiveContent();
+  }
+
   recalcAll();
   recalcMonthly();
-  document.getElementById('saveStatus').textContent = '불러오기 완료';
+  const _ls = document.getElementById('saveStatus');
+  _ls.textContent = '📂 불러오기 완료';
+  _ls.className = 'autosaved';
+  setTimeout(() => { _ls.textContent = ''; _ls.className = ''; }, 3000);
 }
 
 function clearAll() {
@@ -2103,12 +2326,259 @@ function checkHashImport() {
 }
 
 // ══════════════════════════════════════════════
+//  탭 5: 입찰 아카이브
+// ══════════════════════════════════════════════
+// _archives = { "프로젝트명": [ { year:"2021", entries:[{name,amt,drawNum,won}] } ] }
+let _archives = {};
+let _currentArchiveProject = null;
+
+function addArchiveProject() {
+  const inp = document.getElementById('archiveNewProject');
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  if (_archives[name]) { alert('이미 존재하는 프로젝트입니다.'); return; }
+  _archives[name] = [];
+  inp.value = '';
+  _currentArchiveProject = name;
+  renderArchiveChips();
+  renderArchiveContent();
+  autoSave();
+}
+
+function deleteArchiveProject(name) {
+  if (!confirm(`"${name}" 프로젝트를 삭제하시겠습니까? 모든 이력이 삭제됩니다.`)) return;
+  delete _archives[name];
+  if (_currentArchiveProject === name) {
+    _currentArchiveProject = Object.keys(_archives)[0] || null;
+  }
+  renderArchiveChips();
+  renderArchiveContent();
+  autoSave();
+}
+
+function selectArchiveProject(name) {
+  _currentArchiveProject = name;
+  renderArchiveChips();
+  renderArchiveContent();
+}
+
+function renderArchiveChips() {
+  const el = document.getElementById('archiveProjectChips');
+  const projects = Object.keys(_archives);
+  if (projects.length === 0) {
+    el.innerHTML = '<span style="font-size:12px;color:var(--text-muted)">아직 등록된 프로젝트가 없습니다.</span>';
+    return;
+  }
+  el.innerHTML = projects.map(p => `
+    <div class="project-chip ${p === _currentArchiveProject ? 'active' : ''}" onclick="selectArchiveProject(${JSON.stringify(p)})">
+      📁 ${p}
+      <span class="chip-del" title="삭제" onclick="event.stopPropagation();deleteArchiveProject(${JSON.stringify(p)})">✕</span>
+    </div>`).join('');
+}
+
+function addArchiveYear() {
+  if (!_currentArchiveProject) return;
+  const year = new Date().getFullYear().toString();
+  _archives[_currentArchiveProject].unshift({ year, entries: [] });
+  renderArchiveContent();
+  autoSave();
+}
+
+function deleteArchiveYear(yIdx) {
+  if (!_currentArchiveProject) return;
+  if (!confirm('이 연도 기록을 삭제하시겠습니까?')) return;
+  _archives[_currentArchiveProject].splice(yIdx, 1);
+  renderArchiveContent();
+  autoSave();
+}
+
+function addArchiveRow(yIdx) {
+  _archives[_currentArchiveProject][yIdx].entries.push({ name: '', amt: '', drawNum: '', won: false });
+  renderArchiveContent();
+  autoSave();
+}
+
+function deleteArchiveRow(yIdx, rIdx) {
+  _archives[_currentArchiveProject][yIdx].entries.splice(rIdx, 1);
+  renderArchiveContent();
+  autoSave();
+}
+
+function importCurrentBidsToArchive(yIdx) {
+  if (!_currentArchiveProject) return;
+  const entries = [];
+  for (let i = 0; i < COMP_ROWS; i++) {
+    const name = document.getElementById(`cr_name_${i}`)?.value.trim() || '';
+    const amt  = document.getElementById(`cr_amt_${i}`)?.value.trim() || '';
+    const drawNum = document.getElementById(`cr_num_${i}`)?.value.trim() || '';
+    if (name || amt) entries.push({ name, amt, drawNum, won: false });
+  }
+  if (entries.length === 0) { alert('경쟁업체 탭에 입력된 데이터가 없습니다.'); return; }
+  _archives[_currentArchiveProject][yIdx].entries = entries;
+  renderArchiveContent();
+  autoSave();
+  alert(`${entries.length}개 업체 데이터를 가져왔습니다.`);
+}
+
+function archiveFieldChanged(yIdx, rIdx, field, value) {
+  const entry = _archives[_currentArchiveProject][yIdx].entries[rIdx];
+  if (!entry) return;
+  if (field === 'won') entry.won = value;
+  else if (field === 'amt') entry.amt = value;
+  else entry[field] = value;
+  // won 변경 시 행 배경 즉시 반영 (won은 체크박스라 재렌더 불필요, DOM직접)
+  autoSave();
+}
+
+function archiveYearChanged(yIdx, value) {
+  _archives[_currentArchiveProject][yIdx].year = value;
+  autoSave();
+}
+
+function renderArchiveContent() {
+  const el = document.getElementById('archiveProjectContent');
+  if (!_currentArchiveProject || !_archives[_currentArchiveProject]) {
+    el.innerHTML = '';
+    return;
+  }
+
+  const records = _archives[_currentArchiveProject];
+  const proj = _currentArchiveProject;
+
+  // 헤더 카드
+  let html = `
+    <div class="card">
+      <div class="card-title"><span class="icon">📁</span> ${proj} — 연도별 입찰 이력</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+        <button class="btn btn-primary" onclick="addArchiveYear()" style="font-size:13px;padding:8px 14px">
+          ➕ 연도 추가
+        </button>
+        <span style="font-size:12px;color:var(--text-muted);align-self:center">
+          총 ${records.length}개 연도 기록 / ${records.reduce((s,r)=>s+r.entries.length,0)}개 업체 이력
+        </span>
+      </div>
+    </div>`;
+
+  if (records.length === 0) {
+    html += `
+      <div class="card">
+        <div class="archive-empty">
+          <div class="ae-icon">📋</div>
+          <div>아직 연도 기록이 없습니다.<br>"연도 추가" 버튼으로 새 기록을 만들거나<br>경쟁업체 탭 데이터를 가져오세요.</div>
+        </div>
+      </div>`;
+    el.innerHTML = html;
+    return;
+  }
+
+  html += '<div class="archive-year-list">';
+
+  records.forEach((rec, yIdx) => {
+    const winnerEntry = rec.entries.find(e => e.won);
+    const normal = rec.entries.filter(e => {
+      const a = parseWon(e.amt);
+      const base = parseWon(document.getElementById('baseAmt').value);
+      const minR = (parseFloat(document.getElementById('minRate').value)||0)/100;
+      return a > 0 && base > 0 ? (a <= base && (a/base) >= minR) : a > 0;
+    });
+
+    html += `
+      <div class="archive-year-card">
+        <div class="archive-year-header">
+          <div class="archive-year-label">
+            📅 <input type="text" value="${rec.year}" placeholder="연도"
+              onchange="archiveYearChanged(${yIdx}, this.value)">
+          </div>
+          <button class="archive-import-btn" onclick="importCurrentBidsToArchive(${yIdx})">
+            ↙ 현재 경쟁업체 가져오기
+          </button>
+          <button class="archive-del-btn" onclick="deleteArchiveYear(${yIdx})">🗑 삭제</button>
+        </div>
+        <div class="archive-year-body">
+          <table class="archive-table">
+            <thead>
+              <tr>
+                <th style="width:32px">#</th>
+                <th style="min-width:120px">업체명</th>
+                <th style="min-width:130px">입찰금액 (원)</th>
+                <th style="width:90px">추첨번호</th>
+                <th style="width:60px">낙찰</th>
+                <th style="width:30px"></th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+    if (rec.entries.length === 0) {
+      html += `<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px">
+        업체 데이터가 없습니다. 아래 "+ 행 추가" 버튼을 누르거나 "현재 경쟁업체 가져오기"를 이용하세요.
+      </td></tr>`;
+    } else {
+      rec.entries.forEach((e, rIdx) => {
+        const rowClass = e.won ? 'row-winner' : '';
+        const amtNum = parseWon(e.amt);
+        const amtDisplay = amtNum > 0 ? amtNum.toLocaleString('ko-KR') : (e.amt || '');
+        html += `
+          <tr class="${rowClass}" id="ar_row_${yIdx}_${rIdx}">
+            <td style="text-align:center;color:var(--text-muted);font-size:11px">${rIdx+1}</td>
+            <td>
+              <input type="text" value="${e.name || ''}" placeholder="업체명"
+                oninput="archiveFieldChanged(${yIdx},${rIdx},'name',this.value)">
+            </td>
+            <td>
+              <input type="text" value="${amtDisplay}" placeholder="입찰금액"
+                oninput="fmtWon(this);archiveFieldChanged(${yIdx},${rIdx},'amt',this.value)"
+                onblur="fmtWon(this)">
+              ${e.won && amtNum > 0 ? `<div style="font-size:10px;color:var(--success);margin-top:2px">${toKoreanAmt(amtNum)}</div>` : ''}
+            </td>
+            <td>
+              <input type="text" value="${e.drawNum || ''}" placeholder="예) 03 09"
+                style="text-align:center;font-size:12px"
+                oninput="archiveFieldChanged(${yIdx},${rIdx},'drawNum',this.value)">
+            </td>
+            <td class="win-cell">
+              <input type="checkbox" ${e.won ? 'checked' : ''}
+                onchange="archiveFieldChanged(${yIdx},${rIdx},'won',this.checked);
+                  this.closest('tr').className=this.checked?'row-winner':''">
+              ${e.won ? '<div class="winner-badge" style="margin-top:2px">낙찰</div>' : ''}
+            </td>
+            <td><span class="archive-row-del" onclick="deleteArchiveRow(${yIdx},${rIdx})" title="삭제">✕</span></td>
+          </tr>`;
+      });
+    }
+
+    // 통계 요약
+    const winnerName = winnerEntry ? (winnerEntry.name || '(이름없음)') : '낙찰자 미지정';
+    const winnerAmt  = winnerEntry ? parseWon(winnerEntry.amt) : 0;
+    const winnerNum  = winnerEntry ? (winnerEntry.drawNum || '-') : '-';
+
+    html += `
+            </tbody>
+          </table>
+          <button class="archive-add-row-btn" onclick="addArchiveRow(${yIdx})">+ 행 추가</button>
+          <div class="archive-stats-row">
+            <span class="archive-stat">참여업체 <strong>${rec.entries.length}개사</strong></span>
+            <span class="archive-stat">낙찰업체 <strong style="color:var(--success)">${winnerEntry ? winnerName : '-'}</strong></span>
+            <span class="archive-stat">낙찰금액 <strong>${winnerAmt > 0 ? won(winnerAmt) : '-'}</strong></span>
+            <span class="archive-stat">추첨번호 <strong style="color:var(--primary)">${winnerNum}</strong></span>
+            ${winnerAmt > 0 ? `<span class="archive-stat">한글금액 <strong>${toKoreanAmt(winnerAmt)}</strong></span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
 //  초기화
 // ══════════════════════════════════════════════
 (function init() {
   buildCompTable();
   buildMonthlyTable();
   buildFreqGrid();
+  renderArchiveChips();
+  renderArchiveContent();
 
   // 북마클릿 해시 임포트 (저장 데이터보다 우선)
   if (location.hash.startsWith('#import=')) {
