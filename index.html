@@ -1218,12 +1218,12 @@ function recalcAll() {
 function _recalcAllBody() {
   const base = parseWon(document.getElementById('baseAmt').value);
   const minRatePct = parseFloat(document.getElementById('minRate').value) || 0;
-  const adjRatePct = parseFloat(document.getElementById('adjRate').value) || 0;
+  const adjRatePct = parseFloat(document.getElementById('adjRate').value) || 100; // 사정률 미입력 시 100% 기본값
 
-  // 기초금액 + 사정률 + 낙찰하한률 입력 시 → 내 투찰금액 자동 계산
-  // 공식: 투찰금액 = 기초금액 × 사정률(%) × 낙찰하한률(%)
-  if (!_skipMyBidAutoCalc && base > 0 && adjRatePct > 0 && minRatePct > 0) {
-    const autoAmt = Math.round(base * (adjRatePct / 100) * (minRatePct / 100));
+  // 기초금액 + 낙찰하한률 입력 시 → 내 투찰금액 자동 계산 (사정률 미입력이면 100% 적용)
+  // 공식: 투찰금액 = 기초금액 × 낙찰하한률(%) × 사정률(%)
+  if (!_skipMyBidAutoCalc && base > 0 && minRatePct > 0) {
+    const autoAmt = Math.round(base * (minRatePct / 100) * (adjRatePct / 100));
     document.getElementById('myBid').value = autoAmt.toLocaleString('ko-KR');
   }
 
@@ -2613,7 +2613,7 @@ function renderArchiveContent() {
     // 샘플 데이터 세팅
     document.getElementById('bidDate').value = new Date().toISOString().slice(0,10);
     document.getElementById('baseAmt').value = '';
-    document.getElementById('minRate').value = '';
+    document.getElementById('minRate').value = '87.995'; // 낙찰하한률 기본값
     document.getElementById('adjRate').value = '';
     recalcAll();
   }
