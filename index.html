@@ -817,6 +817,68 @@ body {
   font-weight: 700; background: var(--success-light); color: var(--success);
 }
 
+/* ─── Archive Stats Panel ─── */
+.archive-meta-row {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  padding: 8px 12px; background: #f8fafc; border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.archive-meta-row label { font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+.archive-meta-row input[type="text"], .archive-meta-row input[type="number"] {
+  padding: 4px 8px; border: 1px solid var(--input-yellow-border);
+  border-radius: 6px; font-size: 12px; font-family: inherit;
+  background: var(--input-yellow);
+}
+.archive-meta-row input[type="text"] { width: 120px; }
+.archive-meta-row input[type="number"] { width: 75px; }
+.archive-meta-from-tab1 {
+  font-size: 11px; padding: 4px 8px; border-radius: 5px;
+  border: 1px solid var(--primary); background: var(--primary-light);
+  color: var(--primary-dark); cursor: pointer; font-family: inherit; font-weight: 600;
+}
+.archive-meta-from-tab1:hover { background: var(--primary); color: #fff; }
+
+.stats-insight-wrap { padding: 4px 0; }
+.sweet-zone-bar-wrap {
+  margin-bottom: 14px; padding: 14px;
+  background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
+}
+.sweet-zone-bar-title { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; }
+.sweet-zone-track {
+  position: relative; height: 32px; background: #e2e8f0;
+  border-radius: 8px; margin: 0 4px;
+}
+.sweet-zone-fill {
+  position: absolute; height: 100%;
+  background: linear-gradient(90deg, #86efac, #22c55e);
+  border-radius: 8px; opacity: .85;
+}
+.sweet-zone-avg {
+  position: absolute; top: -6px; width: 3px; height: 44px;
+  background: var(--primary); border-radius: 2px; transform: translateX(-50%);
+}
+.sweet-zone-avg-label {
+  position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+  background: var(--primary); color: #fff; font-size: 10px; font-weight: 700;
+  padding: 2px 6px; border-radius: 4px; white-space: nowrap;
+}
+.sweet-zone-labels {
+  display: flex; justify-content: space-between; font-size: 11px;
+  color: var(--text-muted); margin-top: 8px; padding: 0 4px;
+}
+.draw-freq-grid {
+  display: grid; grid-template-columns: repeat(15, 1fr); gap: 4px; margin-top: 4px;
+}
+.draw-freq-cell {
+  text-align: center; border-radius: 6px; padding: 5px 2px;
+}
+.draw-freq-cell .dfn { font-size: 10px; opacity: .7; }
+.draw-freq-cell .dfv { font-size: 14px; font-weight: 800; }
+.insight-stat-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;
+}
+@media (max-width: 600px) { .insight-stat-grid { grid-template-columns: 1fr; } }
+
 /* ─── Responsive ─── */
 @media (max-width: 480px) {
   .card { padding: 14px; }
@@ -2789,16 +2851,53 @@ function parseTableText(raw) {
   const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 2);
   if (lines.length === 0) return [];
 
-  // ── 구분자 자동 감지 (탭 > 콤마 > 공백 순) ──
+  const results = [];
+  const seen = new Set();
+
+  // ── ① 나라장터 개찰결과 특수 형식 감지 ───────────────────────────────
+  // 데이터 행: 사업자번호\t업체명\t대표자\t입찰금액\t사정률[\t추첨번호]
+  // 상태 행:   2026/03/26 09:50:10\t낙찰하한선 미달  ← 건너뜀
+  // 사업자번호 패턴: XXX-XX-XXXXX (예: 215-20-83732)
+  const BIZ_PAT = /^\d{3}-\d{2}-\d{5}/;
+  const DATE_PAT = /^\d{4}[\/\-]\d{2}[\/\-]\d{2}/;
+  const hasBizFormat = lines.some(l => BIZ_PAT.test(l));
+
+  if (hasBizFormat) {
+    for (const line of lines) {
+      if (DATE_PAT.test(line)) continue;   // 날짜/상태 라인 무시
+      if (!BIZ_PAT.test(line)) continue;   // 사업자번호 라인만 처리
+
+      // 탭 우선, 없으면 2칸+ 공백으로 분리
+      const cells = line.includes('\t')
+        ? line.split('\t')
+        : line.split(/\s{2,}/);
+
+      // [0]=사업자번호  [1]=업체명  [2]=대표자  [3]=입찰금액  [4]=사정률  [5~]=추첨번호
+      const name   = (cells[1] || '').trim().replace(/\s+/g, '');
+      const amount = parseInt((cells[3] || '').replace(/[,원\s]/g, '')) || 0;
+
+      // 추첨번호: cells[5] 이후를 합쳐서 두자리 숫자(01~15) 추출
+      const drawRaw  = cells.slice(5).join(' ').trim();
+      const drawNums = drawRaw.match(/\b\d{1,2}\b/g) || [];
+      const drawNum  = drawNums.slice(0, 2).map(n => n.padStart(2, '0')).join(' ');
+
+      if (name && name.length >= 2 && amount > 1_000_000 && !seen.has(name)) {
+        seen.add(name);
+        results.push({ name, amount, drawNum });
+      }
+    }
+    return results;
+  }
+
+  // ── ② 일반 표 형식 (헤더 기반 + 위치/폴백) ────────────────────────
   const sampleLine = lines.find(l => l.includes('\t') || l.split(',').length > 3) || lines[0];
   const delim = sampleLine.includes('\t') ? '\t' : sampleLine.split(',').length > 3 ? ',' : null;
 
-  // ── 헤더 행에서 컬럼 인덱스 자동 탐지 ──
   let nameIdx = -1, amtIdx = -1, numIdx = -1, headerRow = -1;
   for (let i = 0; i < Math.min(5, lines.length); i++) {
     const cells = delim ? lines[i].split(delim) : [lines[i]];
     cells.forEach((c, j) => {
-      const t = c.replace(/\s/g,'');
+      const t = c.replace(/\s/g, '');
       if (t.includes('업체명') || t.includes('회사명') || t.includes('상호명')) nameIdx = j;
       if (t.includes('입찰금액') || t.includes('투찰금액') || t.includes('낙찰금액')) amtIdx = j;
       if (t.includes('추첨번호') || t.includes('번호')) numIdx = j;
@@ -2806,51 +2905,46 @@ function parseTableText(raw) {
     if (nameIdx >= 0 || amtIdx >= 0) { headerRow = i; break; }
   }
 
-  const results = [];
-  const seen = new Set();
   const startRow = headerRow >= 0 ? headerRow + 1 : 0;
 
   for (let li = startRow; li < lines.length; li++) {
     const line = lines[li];
     if (/업체명|사업자등록|순위.*업체|입찰금액.*투찰/.test(line)) continue;
+    if (DATE_PAT.test(line)) continue;
 
     let name = '', amount = 0, drawNum = '';
 
     if (delim) {
       const cells = line.split(delim);
 
-      // 탐지된 인덱스 우선 사용
-      if (nameIdx >= 0 && cells[nameIdx]) name = cells[nameIdx].trim();
-      if (amtIdx  >= 0 && cells[amtIdx])  amount = parseInt(cells[amtIdx].replace(/[,원\s]/g,''));
+      // 헤더 감지 인덱스 우선 사용
+      if (nameIdx >= 0 && cells[nameIdx]) name   = cells[nameIdx].trim();
+      if (amtIdx  >= 0 && cells[amtIdx])  amount = parseInt(cells[amtIdx].replace(/[,원\s]/g, ''));
       if (numIdx  >= 0 && cells[numIdx])  drawNum = cells[numIdx].trim();
 
-      // 인덱스 미탐지 시 위치 기반 파싱
-      if ((!name || !amount) && cells.length >= 5) {
-        name   = name   || cells[2]?.trim();
-        amount = amount || parseInt((cells[4]||'').replace(/[,원\s]/g,''));
-        drawNum= drawNum|| (cells[7]?.trim() || '');
-      }
-
-      // 추가 폴백: 셀에서 큰 숫자 찾기
+      // 큰 숫자로 입찰금액 탐지 (사정률 같은 소수점 숫자 오인 방지)
       if (!amount) {
         for (const c of cells) {
-          const n = parseInt(c.replace(/[,원\s]/g,''));
+          const n = parseInt(c.replace(/[,원\s]/g, ''));
           if (n > 5_000_000 && n < 1_000_000_000_000) { amount = n; break; }
         }
       }
+      // 한글이 가장 긴 셀을 업체명으로
       if (!name) {
-        const korCell = cells.find(c => /[가-힣]{2,}/.test(c) && c.trim().length >= 2 && c.trim().length <= 40);
-        name = korCell?.trim() || '';
+        const korCells = cells.filter(c => /[가-힣]{2,}/.test(c) && c.trim().length >= 2 && c.trim().length <= 40);
+        name = (korCells.sort((a, b) => b.length - a.length)[0] || '').trim();
       }
+      if (!drawNum) drawNum = (cells[5] || cells[6] || cells[7] || '').trim();
+
     } else {
-      // 비구분 폴백: 정규식으로 직접 추출
+      // 비구분 폴백
       const amtM = line.match(/\b(\d{1,3}(?:,\d{3}){2,})\b/g);
       const korM = line.match(/[가-힣()（）㈜\w]{2,30}/g);
-      if (amtM) amount = parseInt(amtM[0].replace(/,/g,''));
-      if (korM) name = korM.find(k => /[가-힣]{2,}/.test(k)) || '';
+      if (amtM) amount = parseInt(amtM[0].replace(/,/g, ''));
+      if (korM) name   = korM.find(k => /[가-힣]{2,}/.test(k)) || '';
     }
 
-    name = name.replace(/\s+/g,'').replace(/^\d+$/, ''); // 순위 숫자만인 경우 제거
+    name = name.replace(/\s+/g, '').replace(/^\d+$/, '');
     if (name && name.length >= 2 && amount > 1_000_000 && !seen.has(name)) {
       seen.add(name);
       results.push({ name, amount, drawNum });
@@ -3069,6 +3163,13 @@ function importCurrentBidsToArchive(yIdx) {
   }
   if (entries.length === 0) { alert('경쟁업체 탭에 입력된 데이터가 없습니다.'); return; }
   _archives[_currentArchiveProject][yIdx].entries = entries;
+  // 탭1 기초금액·하한율도 함께 가져오기
+  const tab1Base = document.getElementById('baseAmt').value;
+  const tab1MinR = document.getElementById('minRate').value;
+  if (tab1Base && !_archives[_currentArchiveProject][yIdx].baseAmt)
+    _archives[_currentArchiveProject][yIdx].baseAmt = tab1Base;
+  if (tab1MinR && !_archives[_currentArchiveProject][yIdx].minRate)
+    _archives[_currentArchiveProject][yIdx].minRate = tab1MinR;
   renderArchiveContent();
   autoSave();
   alert(`${entries.length}개 업체 데이터를 가져왔습니다.`);
@@ -3099,28 +3200,21 @@ function renderArchiveContent() {
   const records = _archives[_currentArchiveProject];
   const proj = _currentArchiveProject;
 
-  // 헤더 카드
   let html = `
     <div class="card">
       <div class="card-title"><span class="icon">📁</span> ${proj} — 연도별 입찰 이력</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-        <button class="btn btn-primary" onclick="addArchiveYear()" style="font-size:13px;padding:8px 14px">
-          ➕ 연도 추가
-        </button>
+        <button class="btn btn-primary" onclick="addArchiveYear()" style="font-size:13px;padding:8px 14px">➕ 연도 추가</button>
         <span style="font-size:12px;color:var(--text-muted);align-self:center">
-          총 ${records.length}개 연도 기록 / ${records.reduce((s,r)=>s+r.entries.length,0)}개 업체 이력
+          총 ${records.length}개 연도 / ${records.reduce((s,r)=>s+r.entries.length,0)}개 업체 이력
         </span>
       </div>
     </div>`;
 
   if (records.length === 0) {
-    html += `
-      <div class="card">
-        <div class="archive-empty">
-          <div class="ae-icon">📋</div>
-          <div>아직 연도 기록이 없습니다.<br>"연도 추가" 버튼으로 새 기록을 만들거나<br>경쟁업체 탭 데이터를 가져오세요.</div>
-        </div>
-      </div>`;
+    html += `<div class="card"><div class="archive-empty"><div class="ae-icon">📋</div>
+      <div>아직 연도 기록이 없습니다.<br>"연도 추가" 버튼으로 새 기록을 만들거나<br>경쟁업체 탭 데이터를 가져오세요.</div>
+    </div></div>`;
     el.innerHTML = html;
     return;
   }
@@ -3129,12 +3223,16 @@ function renderArchiveContent() {
 
   records.forEach((rec, yIdx) => {
     const winnerEntry = rec.entries.find(e => e.won);
-    const normal = rec.entries.filter(e => {
-      const a = parseWon(e.amt);
-      const base = parseWon(document.getElementById('baseAmt').value);
-      const minR = (parseFloat(document.getElementById('minRate').value)||0)/100;
-      return a > 0 && base > 0 ? (a <= base && (a/base) >= minR) : a > 0;
-    });
+    const base   = parseWon(rec.baseAmt || '');
+    const minR   = parseFloat(rec.minRate || 0) / 100;
+    const winAmt = winnerEntry ? parseWon(winnerEntry.amt) : 0;
+
+    // 투찰율 & 추정 사정률 계산
+    const winRate    = base > 0 && winAmt > 0 ? winAmt / base : null;
+    const estAdjRate = base > 0 && winAmt > 0 && minR > 0 ? (winAmt / minR) / base : null;
+    const baseDisplay = base > 0 ? base.toLocaleString('ko-KR') : '';
+    const estPriceNum = parseWon(rec.estPrice || '');
+    const estPriceDisplay = estPriceNum > 0 ? estPriceNum.toLocaleString('ko-KR') : (rec.estPrice || '');
 
     html += `
       <div class="archive-year-card">
@@ -3143,56 +3241,69 @@ function renderArchiveContent() {
             📅 <input type="text" value="${rec.year}" placeholder="연도"
               onchange="archiveYearChanged(${yIdx}, this.value)">
           </div>
-          <button class="archive-import-btn" onclick="importCurrentBidsToArchive(${yIdx})">
-            ↙ 현재 경쟁업체 가져오기
-          </button>
+          <button class="archive-import-btn" onclick="importCurrentBidsToArchive(${yIdx})">↙ 경쟁업체 가져오기</button>
           <button class="archive-del-btn" onclick="deleteArchiveYear(${yIdx})">🗑 삭제</button>
         </div>
+
+        <!-- 기초금액·낙찰하한율 메타 입력 -->
+        <div class="archive-meta-row">
+          <label>기초금액</label>
+          <input type="text" value="${baseDisplay}" placeholder="91,476,000"
+            oninput="fmtWon(this);archiveMetaChanged(${yIdx},'baseAmt',this.value)"
+            onblur="fmtWon(this)">
+          <label>예정가격</label>
+          <input type="text" value="${estPriceDisplay}" placeholder="예정가격"
+            oninput="fmtWon(this);archiveMetaChanged(${yIdx},'estPrice',this.value)"
+            onblur="fmtWon(this)">
+          <label>낙찰하한율%</label>
+          <input type="number" value="${rec.minRate||''}" placeholder="87.995" step="0.001"
+            oninput="archiveMetaChanged(${yIdx},'minRate',this.value)">
+          <button class="archive-meta-from-tab1" onclick="importTab1MetaToYear(${yIdx})">↙ 탭1 값 가져오기</button>
+          ${winRate !== null ? `<span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--primary)">투찰율 ${pct(winRate,3)}</span>` : ''}
+          ${estAdjRate !== null ? `<span style="font-size:12px;font-weight:700;color:var(--success)">사정률 ${pct(estAdjRate,3)}</span>` : ''}
+        </div>
+
         <div class="archive-year-body">
           <table class="archive-table">
             <thead>
               <tr>
-                <th style="width:32px">#</th>
-                <th style="min-width:120px">업체명</th>
+                <th style="width:28px">#</th>
+                <th style="min-width:110px">업체명</th>
                 <th style="min-width:130px">입찰금액 (원)</th>
-                <th style="width:90px">추첨번호</th>
-                <th style="width:60px">낙찰</th>
-                <th style="width:30px"></th>
+                <th style="width:85px">추첨번호</th>
+                <th style="width:55px">낙찰</th>
+                <th style="width:28px"></th>
               </tr>
             </thead>
             <tbody>`;
 
     if (rec.entries.length === 0) {
       html += `<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px">
-        업체 데이터가 없습니다. 아래 "+ 행 추가" 버튼을 누르거나 "현재 경쟁업체 가져오기"를 이용하세요.
-      </td></tr>`;
+        "+ 행 추가" 또는 "경쟁업체 가져오기"를 이용하세요.</td></tr>`;
     } else {
       rec.entries.forEach((e, rIdx) => {
         const rowClass = e.won ? 'row-winner' : '';
         const amtNum = parseWon(e.amt);
         const amtDisplay = amtNum > 0 ? amtNum.toLocaleString('ko-KR') : (e.amt || '');
+        const entryRate = base > 0 && amtNum > 0 ? (amtNum/base*100).toFixed(3)+'%' : '';
         html += `
-          <tr class="${rowClass}" id="ar_row_${yIdx}_${rIdx}">
+          <tr class="${rowClass}">
             <td style="text-align:center;color:var(--text-muted);font-size:11px">${rIdx+1}</td>
-            <td>
-              <input type="text" value="${e.name || ''}" placeholder="업체명"
-                oninput="archiveFieldChanged(${yIdx},${rIdx},'name',this.value)">
-            </td>
+            <td><input type="text" value="${e.name||''}" placeholder="업체명"
+              oninput="archiveFieldChanged(${yIdx},${rIdx},'name',this.value)"></td>
             <td>
               <input type="text" value="${amtDisplay}" placeholder="입찰금액"
                 oninput="fmtWon(this);archiveFieldChanged(${yIdx},${rIdx},'amt',this.value)"
                 onblur="fmtWon(this)">
-              ${e.won && amtNum > 0 ? `<div style="font-size:10px;color:var(--success);margin-top:2px">${toKoreanAmt(amtNum)}</div>` : ''}
+              ${e.won && amtNum > 0 ? `<div style="font-size:10px;color:var(--success)">${toKoreanAmt(amtNum)}</div>` : ''}
+              ${entryRate && !e.won ? `<div style="font-size:10px;color:var(--text-muted)">${entryRate}</div>` : ''}
             </td>
-            <td>
-              <input type="text" value="${e.drawNum || ''}" placeholder="예) 03 09"
-                style="text-align:center;font-size:12px"
-                oninput="archiveFieldChanged(${yIdx},${rIdx},'drawNum',this.value)">
-            </td>
+            <td><input type="text" value="${e.drawNum||''}" placeholder="03 09"
+              style="text-align:center;font-size:12px"
+              oninput="archiveFieldChanged(${yIdx},${rIdx},'drawNum',this.value)"></td>
             <td class="win-cell">
-              <input type="checkbox" ${e.won ? 'checked' : ''}
-                onchange="archiveFieldChanged(${yIdx},${rIdx},'won',this.checked);
-                  this.closest('tr').className=this.checked?'row-winner':''">
+              <input type="checkbox" ${e.won?'checked':''}
+                onchange="archiveFieldChanged(${yIdx},${rIdx},'won',this.checked);this.closest('tr').className=this.checked?'row-winner':''">
               ${e.won ? '<div class="winner-badge" style="margin-top:2px">낙찰</div>' : ''}
             </td>
             <td><span class="archive-row-del" onclick="deleteArchiveRow(${yIdx},${rIdx})" title="삭제">✕</span></td>
@@ -3200,28 +3311,228 @@ function renderArchiveContent() {
       });
     }
 
-    // 통계 요약
-    const winnerName = winnerEntry ? (winnerEntry.name || '(이름없음)') : '낙찰자 미지정';
-    const winnerAmt  = winnerEntry ? parseWon(winnerEntry.amt) : 0;
-    const winnerNum  = winnerEntry ? (winnerEntry.drawNum || '-') : '-';
+    const winnerName = winnerEntry ? (winnerEntry.name||'(이름없음)') : '-';
+    const winnerNum  = winnerEntry ? (winnerEntry.drawNum||'-') : '-';
 
     html += `
             </tbody>
           </table>
           <button class="archive-add-row-btn" onclick="addArchiveRow(${yIdx})">+ 행 추가</button>
           <div class="archive-stats-row">
-            <span class="archive-stat">참여업체 <strong>${rec.entries.length}개사</strong></span>
-            <span class="archive-stat">낙찰업체 <strong style="color:var(--success)">${winnerEntry ? winnerName : '-'}</strong></span>
-            <span class="archive-stat">낙찰금액 <strong>${winnerAmt > 0 ? won(winnerAmt) : '-'}</strong></span>
+            <span class="archive-stat">참여 <strong>${rec.entries.length}개사</strong></span>
+            <span class="archive-stat">낙찰 <strong style="color:var(--success)">${winnerEntry?winnerName:'-'}</strong></span>
+            <span class="archive-stat">금액 <strong>${winAmt>0?won(winAmt):'-'}</strong></span>
+            ${winRate!==null?`<span class="archive-stat">투찰율 <strong style="color:var(--primary)">${pct(winRate,3)}</strong></span>`:''}
+            ${estAdjRate!==null?`<span class="archive-stat">사정률 <strong style="color:var(--success)">${pct(estAdjRate,3)}</strong></span>`:''}
             <span class="archive-stat">추첨번호 <strong style="color:var(--primary)">${winnerNum}</strong></span>
-            ${winnerAmt > 0 ? `<span class="archive-stat">한글금액 <strong>${toKoreanAmt(winnerAmt)}</strong></span>` : ''}
           </div>
         </div>
       </div>`;
   });
 
   html += '</div>';
+
+  // ── 통계 인사이트 패널 ──
+  html += `
+    <div class="card" id="archiveStatsCard">
+      <div class="card-title"><span class="icon">📊</span> ${proj} — 통계 인사이트</div>
+      <div id="archiveStatsPanel" class="stats-insight-wrap"></div>
+    </div>`;
+
   el.innerHTML = html;
+  renderProjectStats(proj);
+}
+
+// ── 아카이브 메타 변경 ──
+function archiveMetaChanged(yIdx, field, value) {
+  if (!_currentArchiveProject) return;
+  _archives[_currentArchiveProject][yIdx][field] = value;
+  renderProjectStats(_currentArchiveProject);
+  autoSave();
+}
+
+// ── 탭1 기초금액·하한율 → 연도 메타에 자동 입력 ──
+function importTab1MetaToYear(yIdx) {
+  if (!_currentArchiveProject) return;
+  const base    = document.getElementById('baseAmt').value;
+  const minR    = document.getElementById('minRate').value;
+  const adjRate = parseFloat(document.getElementById('adjRate').value) || 100;
+  const baseNum = parseWon(base);
+  const estPrice = baseNum > 0 ? Math.round(baseNum * adjRate / 100).toLocaleString('ko-KR') : '';
+  _archives[_currentArchiveProject][yIdx].baseAmt  = base;
+  _archives[_currentArchiveProject][yIdx].minRate  = minR;
+  _archives[_currentArchiveProject][yIdx].estPrice = estPrice;
+  renderArchiveContent();
+  autoSave();
+}
+
+// ── 프로젝트 통계 인사이트 렌더링 ──
+function renderProjectStats(proj) {
+  const panel = document.getElementById('archiveStatsPanel');
+  if (!panel) return;
+
+  const records = _archives[proj] || [];
+
+  // 연도별 데이터 수집
+  const yearData = records.map(r => {
+    const base  = parseWon(r.baseAmt || '');
+    const minR  = parseFloat(r.minRate || 0) / 100;
+    const winner = r.entries.find(e => e.won);
+    const winAmt = winner ? parseWon(winner.amt) : 0;
+    const participants = r.entries.filter(e => parseWon(e.amt) > 0).length;
+    const drawNums = winner && winner.drawNum
+      ? (winner.drawNum.match(/\d+/g)||[]).map(n=>parseInt(n)).filter(n=>n>=1&&n<=15)
+      : [];
+    return {
+      year: r.year, base, minR, winAmt, winner, participants, drawNums,
+      winRate:    base>0&&winAmt>0 ? winAmt/base : null,
+      estAdjRate: base>0&&winAmt>0&&minR>0 ? (winAmt/minR)/base : null,
+    };
+  });
+
+  const hasBase = yearData.some(d => d.base > 0);
+  if (!hasBase) {
+    panel.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">
+      💡 각 연도 카드에서 <strong>기초금액</strong>과 <strong>낙찰하한율</strong>을 입력하면<br>
+      투찰율·사정률·당선 구간·추첨번호 빈도 통계가 자동으로 계산됩니다.
+    </div>`;
+    return;
+  }
+
+  const winRates  = yearData.filter(d=>d.winRate!==null).map(d=>d.winRate);
+  const adjRates  = yearData.filter(d=>d.estAdjRate!==null).map(d=>d.estAdjRate);
+  const drawFreq  = {};
+  for (let n=1;n<=15;n++) drawFreq[n]=0;
+  yearData.forEach(d=>d.drawNums.forEach(n=>{ if(drawFreq[n]!==undefined) drawFreq[n]++; }));
+  const maxFreq   = Math.max(...Object.values(drawFreq), 1);
+  const allParts  = yearData.filter(d=>d.participants>0).map(d=>d.participants);
+
+  let html = '';
+
+  // ── 연도별 요약 테이블 ──
+  html += `
+  <div style="overflow-x:auto;margin-bottom:16px">
+    <table class="archive-table" style="min-width:520px">
+      <thead><tr>
+        <th>연도</th><th>낙찰업체</th><th>낙찰금액</th>
+        <th style="color:var(--primary)">투찰율</th>
+        <th style="color:var(--success)">추정 사정률</th>
+        <th>참여사</th><th>추첨번호</th>
+      </tr></thead><tbody>`;
+
+  yearData.forEach(d => {
+    const isWin = !!d.winner;
+    html += `<tr ${isWin?'class="row-winner"':''}>
+      <td style="font-weight:700">${d.year}</td>
+      <td>${d.winner?.name||'<span style="color:var(--text-muted)">미기록</span>'}</td>
+      <td>${d.winAmt>0?won(d.winAmt):'-'}</td>
+      <td style="font-weight:700;color:var(--primary)">${d.winRate!==null?pct(d.winRate,3):'-'}</td>
+      <td style="font-weight:700;color:var(--success)">${d.estAdjRate!==null?pct(d.estAdjRate,3):'<span style="font-size:11px;color:var(--text-muted)">하한율 필요</span>'}</td>
+      <td style="text-align:center">${d.participants>0?d.participants+'사':'-'}</td>
+      <td style="text-align:center;font-weight:600;color:var(--primary)">${d.winner?.drawNum||'-'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  // ── 투찰율 + 사정률 집계 박스 ──
+  if (winRates.length > 0) {
+    const avg = v => v.reduce((s,x)=>s+x,0)/v.length;
+    const avgWR = avg(winRates), minWR = Math.min(...winRates), maxWR = Math.max(...winRates);
+    const avgAR = adjRates.length>0 ? avg(adjRates) : null;
+    const minAR = adjRates.length>0 ? Math.min(...adjRates) : null;
+    const maxAR = adjRates.length>0 ? Math.max(...adjRates) : null;
+
+    html += `<div class="insight-stat-grid">
+      <div class="prob-info-box">
+        <h4>🎯 낙찰자 투찰율 분석 (${winRates.length}건)</h4>
+        <div class="prob-info-row"><span>평균 투찰율</span><span style="color:var(--primary);font-weight:800;font-size:15px">${pct(avgWR,3)}</span></div>
+        <div class="prob-info-row"><span>최저 투찰율</span><span>${pct(minWR,3)}</span></div>
+        <div class="prob-info-row"><span>최고 투찰율</span><span>${pct(maxWR,3)}</span></div>
+        <div class="prob-info-row"><span>당선 구간 폭</span><span style="color:var(--warning);font-weight:700">${((maxWR-minWR)*100).toFixed(3)}%p</span></div>
+      </div>
+      ${avgAR!==null?`
+      <div class="prob-info-box">
+        <h4>📐 추정 사정률 (낙찰하한 역산, ${adjRates.length}건)</h4>
+        <div class="prob-info-row"><span>평균 사정률</span><span style="color:var(--success);font-weight:800;font-size:15px">${pct(avgAR,3)}</span></div>
+        <div class="prob-info-row"><span>최저 사정률</span><span>${pct(minAR,3)}</span></div>
+        <div class="prob-info-row"><span>최고 사정률</span><span>${pct(maxAR,3)}</span></div>
+        <div class="prob-info-row"><span>편차 범위</span><span style="color:var(--warning);font-weight:700">${((maxAR-minAR)*100).toFixed(3)}%p</span></div>
+      </div>` : '<div></div>'}
+    </div>`;
+
+    // ── 당선존 바 (Sweet Zone) ──
+    const barMin  = Math.max(minWR*100 - 0.15, 85);
+    const barMax  = Math.min(maxWR*100 + 0.15, 96);
+    const barSpan = barMax - barMin;
+    const zL = ((minWR*100-barMin)/barSpan*100).toFixed(1);
+    const zW = Math.max(((maxWR-minWR)*100/barSpan*100), 1).toFixed(1);
+    const aL = ((avgWR*100-barMin)/barSpan*100).toFixed(1);
+
+    html += `
+    <div class="sweet-zone-bar-wrap">
+      <div class="sweet-zone-bar-title">🎯 당선 투찰율 구간 (Sweet Zone) — 이 범위에 투찰하면 당첨 가능성 ↑</div>
+      <div class="sweet-zone-track">
+        <div class="sweet-zone-fill" style="left:${zL}%;width:${zW}%"></div>
+        <div class="sweet-zone-avg" style="left:${aL}%">
+          <div class="sweet-zone-avg-label">평균 ${(avgWR*100).toFixed(3)}%</div>
+        </div>
+      </div>
+      <div class="sweet-zone-labels">
+        <span>${barMin.toFixed(2)}%</span>
+        <span style="color:var(--success);font-weight:700">✅ ${(minWR*100).toFixed(3)}% ~ ${(maxWR*100).toFixed(3)}%</span>
+        <span>${barMax.toFixed(2)}%</span>
+      </div>
+    </div>`;
+  }
+
+  // ── 추첨번호 빈도 히트맵 ──
+  const hasDrawData = Object.values(drawFreq).some(v=>v>0);
+  if (hasDrawData) {
+    const drawYears = yearData.filter(d=>d.drawNums.length>0).length;
+    html += `
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px">🎲 낙찰자 추첨번호 빈도 (${drawYears}건 기준) — 진할수록 자주 선택됨</div>
+      <div class="draw-freq-grid">`;
+    for (let n=1;n<=15;n++) {
+      const f = drawFreq[n];
+      const intensity = f/maxFreq;
+      const bg = f===0?'#f1f5f9'
+        : f===maxFreq?'#1a56db'
+        : `rgba(26,86,219,${(0.15+intensity*0.7).toFixed(2)})`;
+      const txtColor = intensity>0.55?'#fff':'var(--text)';
+      html += `<div class="draw-freq-cell" style="background:${bg};color:${txtColor}">
+        <div class="dfn">${n}번</div>
+        <div class="dfv">${f}</div>
+      </div>`;
+    }
+    html += '</div></div>';
+  }
+
+  // ── 경쟁 강도 ──
+  if (allParts.length > 0) {
+    const avgP = allParts.reduce((s,v)=>s+v,0)/allParts.length;
+    const intensity = avgP > 20 ? '⚠️ 매우 치열' : avgP > 10 ? '🔶 보통' : '🟢 비교적 낮음';
+    html += `
+    <div style="padding:10px 14px;background:var(--warning-light);border:1px solid #fde68a;border-radius:8px;font-size:13px">
+      <strong>🏃 경쟁 강도:</strong> 평균 참여사 <strong>${avgP.toFixed(1)}개사</strong>
+      (최소 ${Math.min(...allParts)}사 ~ 최대 ${Math.max(...allParts)}사) — ${intensity}
+    </div>`;
+  }
+
+  // ── 다음 입찰 추천 투찰율 ──
+  if (winRates.length >= 2) {
+    const avgWR = winRates.reduce((s,v)=>s+v,0)/winRates.length;
+    const recBase = parseWon(document.getElementById('baseAmt').value);
+    html += `
+    <div style="margin-top:14px;padding:16px;background:linear-gradient(135deg,#1a56db0d,#3b82f618);border:2px solid var(--primary);border-radius:12px;text-align:center">
+      <div style="font-size:13px;font-weight:600;color:var(--primary-dark);margin-bottom:6px">💡 과거 데이터 기반 — 다음 입찰 권장 투찰율</div>
+      <div style="font-size:28px;font-weight:800;color:var(--primary)">${pct(avgWR,3)}</div>
+      ${recBase>0?`<div style="font-size:14px;color:var(--text);margin-top:4px">현재 기초금액 기준: <strong>${won(recBase*avgWR)}</strong></div>`:''}
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${winRates.length}회 낙찰 데이터 평균값 | 실제 투찰 시 시장 상황 추가 반영 필요</div>
+    </div>`;
+  }
+
+  panel.innerHTML = html || '<div style="color:var(--text-muted);font-size:12px;padding:12px">데이터를 입력하면 통계가 표시됩니다.</div>';
 }
 
 // ══════════════════════════════════════════════
