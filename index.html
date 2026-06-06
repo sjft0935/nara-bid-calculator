@@ -654,6 +654,39 @@ body {
 /* ─── Auto-save indicator ─── */
 #saveStatus.autosaved { color: var(--success); font-weight: 600; }
 
+/* ─── 사정률 방향성 분석 패널 ─── */
+.analysis-section { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:4px; }
+@media(max-width:700px){ .analysis-section { grid-template-columns:1fr; } }
+.analysis-box { background:#f8fafc; border:1px solid var(--border); border-radius:10px; padding:14px; }
+.analysis-box h4 { font-size:13px; font-weight:700; color:var(--text-muted); margin:0 0 10px; text-transform:uppercase; letter-spacing:.4px; }
+.dir-badge { display:inline-flex; align-items:center; gap:6px; font-size:22px; font-weight:800; padding:8px 16px; border-radius:8px; }
+.dir-badge.up   { background:var(--danger-light);   color:var(--danger); }
+.dir-badge.down { background:var(--primary-light);  color:var(--primary); }
+.dir-badge.flat { background:#f1f5f9; color:#64748b; }
+.dir-desc { font-size:12px; color:var(--text-muted); margin-top:8px; line-height:1.6; }
+.hotzone-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+.hotzone-item { display:flex; align-items:center; gap:8px; font-size:13px; }
+.hotzone-bar-wrap { flex:1; height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden; }
+.hotzone-bar { height:100%; border-radius:4px; transition:width .4s; }
+.hotzone-label { font-weight:700; min-width:70px; }
+.hotzone-tag { font-size:10px; padding:2px 6px; border-radius:10px; font-weight:700; }
+.tag-hot  { background:#fee2e2; color:#dc2626; }
+.tag-warm { background:#fef3c7; color:#d97706; }
+.tag-cool { background:#dbeafe; color:#1a56db; }
+.tag-cold { background:#dcfce7; color:#16a34a; } /* cold = opportunity! */
+
+/* ─── 경쟁사 갭 분석 ─── */
+.gap-map { margin-top:10px; }
+.gap-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; font-size:12px; }
+.gap-dot  { width:10px; height:10px; border-radius:50%; background:#94a3b8; flex-shrink:0; }
+.gap-dot.winner { background:var(--success); }
+.gap-line { flex:1; height:3px; background:var(--border); border-radius:2px; position:relative; }
+.gap-line.best { background:linear-gradient(90deg,var(--success),#86efac); }
+.gap-size { font-size:11px; color:var(--text-muted); min-width:50px; text-align:right; }
+.gap-rec-box { background:var(--success-light); border:1px solid #86efac; border-radius:8px; padding:10px 14px; margin-top:10px; font-size:13px; }
+.gap-rec-box strong { color:var(--success); font-size:15px; }
+.precision-tip { font-size:11px; color:var(--text-muted); margin-top:4px; }
+
 /* ─── Archive Tab ─── */
 .archive-toolbar {
   display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;
@@ -1010,6 +1043,17 @@ body {
     <div class="chart-wrap" style="height:180px;margin-top:14px"><canvas id="compChart"></canvas></div>
   </div>
 
+  <!-- 경쟁사 갭 분석 카드 -->
+  <div class="card">
+    <div class="card-title"><span class="icon">🎯</span> 경쟁사 갭 분석 — 최적 투찰 공간 탐색</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+      경쟁사 사정률 사이의 <strong>빈 공간(갭)</strong>을 찾아 경쟁 회피 + 확률 높은 투찰 포인트를 제안합니다.
+    </p>
+    <div id="gapAnalysisPanel">
+      <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">정상 업체 2개 이상 입력 시 분석이 시작됩니다.</p>
+    </div>
+  </div>
+
 </section>
 
 <!-- ═══════════════════════════════════════
@@ -1025,6 +1069,7 @@ body {
         <thead>
           <tr>
             <th>연월</th>
+            <th>업종</th>
             <th>기초금액 (원)</th>
             <th>내 입찰금액 (원)</th>
             <th>낙찰</th>
@@ -1066,6 +1111,17 @@ body {
       </div>
     </div>
     <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
+  </div>
+
+  <!-- 사정률 방향성 & 빈도 분석 카드 -->
+  <div class="card">
+    <div class="card-title"><span class="icon">🧭</span> 사정률 방향성 &amp; 빈도 발생점 분석</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
+      월별 데이터 기반 — <strong>방향성</strong>(+ 또는 −), <strong>빈도 핫존</strong>, <strong>냉각 공간(기회구간)</strong>을 분석합니다.
+    </p>
+    <div id="sajeongAnalysisPanel">
+      <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0">📥 월별 데이터를 2건 이상 입력하면 분석이 시작됩니다.</p>
+    </div>
   </div>
 
 </section>
@@ -1491,6 +1547,14 @@ function recalcCompetitors() {
   document.getElementById('recStratLabel').textContent = recLabel;
   document.getElementById('recommendAmt').textContent  = recAmt ? won(recAmt) : '-';
   document.getElementById('recommendDesc').textContent = recDesc || '기초금액과 경쟁업체 데이터를 입력하세요';
+
+  // 경쟁사 갭 분석 (이름 포함)
+  const namedNormal = normal.map(e => ({
+    ...e,
+    name: document.getElementById(`cr_name_${e.i}`)?.value || ''
+  }));
+  analyzeCompetitorGaps(namedNormal, base, minRate);
+
   autoSave();
 }
 
@@ -1630,6 +1694,16 @@ function buildMonthlyTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input type="month" id="m_month_${i}" oninput="recalcMonthly()"></td>
+      <td>
+        <select id="m_type_${i}" onchange="recalcMonthly()"
+          style="width:64px;font-size:11px;padding:3px 2px;border:1px solid var(--border);border-radius:5px;background:var(--input-yellow)">
+          <option value="">-</option>
+          <option value="공사">공사</option>
+          <option value="물품">물품</option>
+          <option value="용역">용역</option>
+          <option value="기타">기타</option>
+        </select>
+      </td>
       <td><input type="text" id="m_base_${i}" placeholder="기초금액" class="won-input"
         oninput="fmtWon(this);recalcMonthly()" onblur="fmtWon(this)"></td>
       <td><input type="text" id="m_bid_${i}" placeholder="내 입찰금액" class="won-input"
@@ -1645,6 +1719,7 @@ function buildMonthlyTable() {
 function recalcMonthly() {
   let total = 0, wins = 0, sumBase = 0, sumBid = 0, sumRate = 0, rateCount = 0;
   const monthLabels = [], bidAmts = [], baseAmts = [], winFlags = [];
+  const allRatesMonthly = []; // 시간순 사정률 (방향성 분석용)
 
   for (let i = 0; i < MONTH_ROWS; i++) {
     const month = document.getElementById(`m_month_${i}`).value;
@@ -1661,13 +1736,16 @@ function recalcMonthly() {
       if (win) wins++;
       if (base > 0) sumBase += base;
       sumBid += bid;
-      if (rate !== null) { sumRate += rate; rateCount++; }
+      if (rate !== null) { sumRate += rate; rateCount++; allRatesMonthly.push(rate); }
       monthLabels.push(month);
       bidAmts.push(bid);
       baseAmts.push(base || 0);
       winFlags.push(win);
     }
   }
+
+  // 사정률 방향성 & 빈도 분석 렌더링
+  renderSajeongAnalysis(allRatesMonthly);
 
   document.getElementById('s_total').textContent = total || '-';
   document.getElementById('s_wins').textContent = total ? wins : '-';
@@ -1727,6 +1805,161 @@ function recalcMonthly() {
 }
 
 function renderMonthlyChart() { recalcMonthly(); }
+
+// ══════════════════════════════════════════════
+//  사정률 방향성 & 빈도 발생점 분석
+// ══════════════════════════════════════════════
+function renderSajeongAnalysis(rates) {
+  const panel = document.getElementById('sajeongAnalysisPanel');
+  if (!panel) return;
+
+  if (rates.length < 2) {
+    panel.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0">📥 월별 데이터를 2건 이상 입력하면 분석이 시작됩니다.</p>';
+    return;
+  }
+
+  // ── 1. 방향성 분석 ──
+  const overall = rates.reduce((s,v)=>s+v,0) / rates.length;
+  const recentN  = Math.min(3, rates.length);
+  const recent   = rates.slice(-recentN);
+  const recentAvg = recent.reduce((s,v)=>s+v,0) / recent.length;
+  const diff = recentAvg - overall;
+  const dirSign  = diff > 0.0001 ? '+' : diff < -0.0001 ? '−' : '→';
+  const dirClass = diff > 0.0001 ? 'up' : diff < -0.0001 ? 'down' : 'flat';
+  const dirDesc  = diff > 0.0001
+    ? `최근 ${recentN}건 평균(${pct(recentAvg)})이 전체 평균(${pct(overall)})보다 <strong>높습니다</strong>.<br>→ 다음 입찰은 <strong style="color:var(--danger)">더 높은 사정률</strong> 구간 탐색 권장`
+    : diff < -0.0001
+    ? `최근 ${recentN}건 평균(${pct(recentAvg)})이 전체 평균(${pct(overall)})보다 <strong>낮습니다</strong>.<br>→ 다음 입찰은 <strong style="color:var(--primary)">더 낮은 사정률</strong> 구간 탐색 권장`
+    : `최근 추세가 <strong>안정적</strong>입니다 (변동 0.01%p 미만).<br>→ 전체 평균(${pct(overall)}) 근처 구간이 적합합니다`;
+
+  // ── 2. 빈도 발생점 분석 (0.1%p 단위 버킷) ──
+  const buckets = {};
+  rates.forEach(r => {
+    const key = (Math.floor(r * 1000) / 1000).toFixed(3);
+    buckets[key] = (buckets[key] || 0) + 1;
+  });
+  const sorted = Object.entries(buckets)
+    .map(([k,cnt]) => ({ key: parseFloat(k), cnt }))
+    .sort((a,b) => b.cnt - a.cnt);
+
+  const maxCnt = sorted[0]?.cnt || 1;
+  // 최근 3건의 버킷 키
+  const recentKeys = new Set(recent.map(r => (Math.floor(r*1000)/1000).toFixed(3)));
+
+  const hotzoneHTML = sorted.slice(0, 5).map((item, idx) => {
+    const isRecent  = recentKeys.has(item.key.toFixed(3));
+    const barColor  = idx === 0 ? '#dc2626' : idx === 1 ? '#d97706' : '#3b82f6';
+    const barWidth  = (item.cnt / maxCnt * 100).toFixed(0);
+    let tag = '', tagClass = '';
+    if (idx === 0 && !isRecent) { tag = '기회구간!'; tagClass = 'tag-cold'; }
+    else if (idx === 0)         { tag = '핫존';      tagClass = 'tag-hot';  }
+    else if (isRecent)          { tag = '최근 발생'; tagClass = 'tag-warm'; }
+    else                        { tag = '주목';      tagClass = 'tag-cool'; }
+    return `
+      <li class="hotzone-item">
+        <span class="hotzone-label">${pct(item.key)}~${pct(item.key+0.001)}</span>
+        <div class="hotzone-bar-wrap">
+          <div class="hotzone-bar" style="width:${barWidth}%;background:${barColor}"></div>
+        </div>
+        <span style="font-size:12px;color:var(--text-muted);min-width:28px">${item.cnt}건</span>
+        <span class="hotzone-tag ${tagClass}">${tag}</span>
+      </li>`;
+  }).join('');
+
+  // ── 3. 추천 사정률 ──
+  // 빈도 1위이지만 최근 3건에 없는 구간 = 기회구간(식어서 경쟁 줄어든 고빈도 구간)
+  const coldHot = sorted.find(item => !recentKeys.has(item.key.toFixed(3)));
+  const recRate = coldHot ? coldHot.key + 0.0005 : (sorted[0]?.key ?? overall) + 0.0005;
+  const recDesc2 = coldHot
+    ? `역사적 최고빈도(${pct(coldHot.key)})이지만 최근 발생이 없는 <strong>기회구간</strong> 중심값`
+    : `최고 빈도 구간 중심값 (전체 평균 ${pct(overall)} 참고)`;
+
+  panel.innerHTML = `
+    <div class="analysis-section">
+      <div class="analysis-box">
+        <h4>① 사정률 방향성</h4>
+        <div class="dir-badge ${dirClass}">${dirSign} ${pct(Math.abs(diff))}</div>
+        <div class="dir-desc">${dirDesc}</div>
+      </div>
+      <div class="analysis-box">
+        <h4>② 빈도 발생점 (상위 5구간)</h4>
+        <ul class="hotzone-list">${hotzoneHTML}</ul>
+      </div>
+    </div>
+    <div class="analysis-box" style="margin-top:12px">
+      <h4>③ 추천 사정률 포인트</h4>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:6px">
+        <div style="font-size:24px;font-weight:800;color:var(--success)">${pct(recRate)}</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.7">${recDesc2}<br>
+          <span style="color:var(--text-muted)">전체 ${rates.length}건 분석 | 전체 평균 ${pct(overall)} | 최근 평균 ${pct(recentAvg)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════
+//  경쟁사 갭 분석
+// ══════════════════════════════════════════════
+function analyzeCompetitorGaps(normalEntries, base, minRate) {
+  const panel = document.getElementById('gapAnalysisPanel');
+  if (!panel) return;
+
+  if (normalEntries.length < 2) {
+    panel.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">정상 업체 2개 이상 입력 시 분석이 시작됩니다.</p>';
+    return;
+  }
+
+  // 사정률 기준 오름차순 정렬
+  const sorted = [...normalEntries].sort((a,b) => a.rate - b.rate);
+
+  // 인접 갭 계산
+  const gaps = [];
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const gap = sorted[i+1].rate - sorted[i].rate;
+    gaps.push({ lo: sorted[i], hi: sorted[i+1], gap, mid: (sorted[i].rate + sorted[i+1].rate) / 2 });
+  }
+  gaps.sort((a,b) => b.gap - a.gap);
+
+  const bestGap = gaps[0];
+  const bestMidAmt = Math.round(base * bestGap.mid);
+  const bestMidRate = bestGap.mid;
+
+  // 소수점 추천: 갭이 작을수록 더 많은 소수점
+  const gapPct = bestGap.gap * 100;
+  const precision = gapPct > 1 ? 2 : gapPct > 0.1 ? 3 : gapPct > 0.01 ? 4 : 5;
+
+  // 갭 맵 HTML (낮은 사정률 → 높은 사정률)
+  const mapHTML = sorted.map((e, idx) => {
+    const gapAfter = idx < sorted.length - 1 ? sorted[idx+1].rate - e.rate : null;
+    const isBestGap = gapAfter !== null && Math.abs(gapAfter - bestGap.gap) < 0.000001;
+    return `
+      <div class="gap-row">
+        <div class="gap-dot"></div>
+        <span style="font-size:12px;min-width:68px">${pct(e.rate)}</span>
+        <span style="font-size:11px;color:var(--text-muted);flex:1">${e.name||'업체 '+(idx+1)}</span>
+        ${gapAfter !== null ? `
+          <div style="display:flex;align-items:center;gap:4px;width:120px">
+            <div class="gap-line${isBestGap?' best':''}"></div>
+            <span class="gap-size">${isBestGap?'★ ':''} ${(gapAfter*100).toFixed(3)}%p</span>
+          </div>` : ''}
+      </div>`;
+  }).join('');
+
+  const crName = sorted.map(e=>e.name).filter(Boolean).join(', ');
+
+  panel.innerHTML = `
+    <div class="gap-map">${mapHTML}</div>
+    <div class="gap-rec-box">
+      <div style="font-size:12px;color:var(--success);font-weight:700;margin-bottom:4px">★ 최대 갭 구간 추천 투찰 포인트</div>
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <strong>${pct(bestMidRate)}</strong>
+        <span style="font-size:13px;color:var(--text)">= ${won(bestMidAmt)}</span>
+      </div>
+      <div class="precision-tip">갭 크기: ${(bestGap.gap*100).toFixed(3)}%p (${pct(bestGap.lo.rate)} ~ ${pct(bestGap.hi.rate)} 사이) | 권장 소수점: <strong>${precision}자리</strong></div>
+    </div>
+  `;
+}
 
 // ══════════════════════════════════════════════
 //  탭 4: KONEPS 예비가격 시뮬레이션
@@ -1909,6 +2142,7 @@ function saveData() {
   for (let i = 0; i < MONTH_ROWS; i++) {
     d.monthly.push({
       month: document.getElementById(`m_month_${i}`).value,
+      type: document.getElementById(`m_type_${i}`)?.value || '',
       base: document.getElementById(`m_base_${i}`).value,
       bid: document.getElementById(`m_bid_${i}`).value,
       win: document.getElementById(`m_win_${i}`).checked,
@@ -1943,6 +2177,7 @@ function loadData() {
   if (d.monthly) {
     d.monthly.forEach((m, i) => {
       document.getElementById(`m_month_${i}`).value = m.month || '';
+      if (document.getElementById(`m_type_${i}`)) document.getElementById(`m_type_${i}`).value = m.type || '';
       document.getElementById(`m_base_${i}`).value = m.base || '';
       document.getElementById(`m_bid_${i}`).value = m.bid || '';
       document.getElementById(`m_win_${i}`).checked = m.win || false;
