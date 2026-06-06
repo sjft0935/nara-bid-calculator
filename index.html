@@ -648,8 +648,8 @@ body {
   font-size: 13px;
   line-height: 1.5;
 }
-.korean-amt .ka-short { font-weight: 700; color: #92400e; font-size: 15px; }
-.korean-amt .ka-words { color: #78350f; font-size: 12px; margin-top: 1px; }
+.korean-amt .ka-short { display: none; }
+.korean-amt .ka-words { color: #78350f; font-size: 17px; font-weight: 700; margin-top: 0; }
 
 /* ─── Auto-save indicator ─── */
 #saveStatus.autosaved { color: var(--success); font-weight: 600; }
@@ -1262,7 +1262,6 @@ function _recalcAllBody() {
   // 한글 금액 표기
   const koreanBox = document.getElementById('myBidKorean');
   if (myBid > 0) {
-    document.getElementById('myBidKoreanShort').textContent = toKoreanAmt(myBid);
     document.getElementById('myBidKoreanWords').textContent = toKoreanWords(myBid);
     koreanBox.style.display = 'block';
   } else {
