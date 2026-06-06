@@ -687,6 +687,40 @@ body {
 .gap-rec-box strong { color:var(--success); font-size:15px; }
 .precision-tip { font-size:11px; color:var(--text-muted); margin-top:4px; }
 
+/* ─── 경쟁사 DB ─── */
+.compdb-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.compdb-count   { font-size:12px; color:var(--text-muted); margin-left:auto; }
+.compdb-head    { display:grid; grid-template-columns:180px 50px 95px 45px 1fr 150px 65px 52px;
+                  gap:8px; padding:6px 12px; font-size:11px; font-weight:700; color:var(--text-muted);
+                  border-bottom:2px solid var(--border); }
+.compdb-row     { display:grid; grid-template-columns:180px 50px 95px 45px 1fr 150px 65px 52px;
+                  gap:8px; padding:9px 12px; align-items:center; border-bottom:1px solid var(--border);
+                  cursor:pointer; transition:background .15s; }
+.compdb-row:hover { background:var(--primary-light); }
+@media(max-width:800px){
+  .compdb-head,.compdb-row { grid-template-columns:1fr 50px 90px 40px; }
+  .compdb-head span:nth-child(n+5),
+  .compdb-row  > *:nth-child(n+5) { display:none; }
+}
+.compdb-name  { font-weight:700; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.compdb-avg   { font-size:14px; font-weight:800; color:var(--primary); }
+.compdb-viz   { }
+.compdb-viz-track { height:12px; background:#e2e8f0; border-radius:6px; position:relative; overflow:visible; }
+.compdb-viz-range { position:absolute; height:100%; background:#93c5fd88; border-radius:6px;
+                    border:1px solid #3b82f6; }
+.compdb-viz-avg   { position:absolute; width:3px; height:18px; top:-3px; background:var(--primary);
+                    border-radius:2px; transform:translateX(-50%); z-index:1; }
+.compdb-viz-tick  { position:absolute; bottom:-14px; font-size:9px; color:var(--text-muted);
+                    transform:translateX(-50%); white-space:nowrap; }
+.rate-chip    { display:inline-block; background:var(--primary-light); color:var(--primary);
+                font-size:10px; padding:2px 6px; border-radius:10px; font-weight:700; white-space:nowrap; }
+.compdb-detail-wrap { background:#f8fafc; border-bottom:2px solid var(--primary-light); padding:14px 16px; }
+.compdb-stats-row   { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.compdb-stat        { background:white; border:1px solid var(--border); border-radius:8px;
+                      padding:8px 14px; text-align:center; min-width:80px; }
+.compdb-stat-label  { font-size:10px; color:var(--text-muted); }
+.compdb-stat-val    { font-size:15px; font-weight:700; margin-top:2px; }
+
 /* ─── Archive Tab ─── */
 .archive-toolbar {
   display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;
@@ -815,6 +849,7 @@ body {
   <button class="tab-btn" onclick="switchTab('t3',this)">📅 월별 누적 현황</button>
   <button class="tab-btn" onclick="switchTab('t4',this)">🎲 예정가격 시뮬레이션</button>
   <button class="tab-btn" onclick="switchTab('t5',this)">📚 입찰 아카이브</button>
+  <button class="tab-btn" onclick="switchTab('t6',this)">🗂 경쟁사 DB</button>
 </nav>
 
 <!-- ═══════════════════════════════════════
@@ -1197,6 +1232,94 @@ body {
 
 </section>
 
+<!-- ═══════════════════════════════════════
+     탭 6: 경쟁사 데이터베이스
+═══════════════════════════════════════ -->
+<section id="t6" class="tab-content">
+
+  <div class="card">
+    <div class="card-title"><span class="icon">🗂</span> 경쟁사 사정률 데이터베이스</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.8">
+      과거 개찰결과를 누적하여 경쟁사별 <strong>사정률 패턴</strong>(평균·범위·추세·소수점 습관)을 한 눈에 파악합니다.<br>
+      행을 클릭하면 전체 이력을 확인할 수 있습니다.
+    </p>
+    <div class="compdb-toolbar">
+      <button class="btn btn-primary" onclick="openCompDBModal()">📥 이력 추가 (붙여넣기)</button>
+      <button class="btn btn-outline" onclick="exportCompDB()">⬇ DB 내보내기</button>
+      <label class="btn btn-outline" style="cursor:pointer">⬆ DB 가져오기
+        <input type="file" accept=".json" style="display:none" onchange="importCompDB(event)">
+      </label>
+      <span class="compdb-count" id="compDBCount">0개 업체</span>
+    </div>
+
+    <!-- 전체 사정률 범위 눈금 안내 -->
+    <div style="display:grid;grid-template-columns:180px 50px 95px 45px 1fr 150px 65px 52px;gap:8px;padding:0 12px 4px;font-size:9px;color:var(--text-muted)">
+      <span></span><span></span><span></span><span></span>
+      <div style="display:flex;justify-content:space-between;padding:0 2px">
+        <span>86%</span><span>88%</span><span>90%</span><span>92%</span><span>94%</span><span>96%</span>
+      </div>
+      <span></span><span></span><span></span>
+    </div>
+
+    <!-- 헤더 -->
+    <div class="compdb-head">
+      <span>업체명</span>
+      <span>건수</span>
+      <span>평균 사정률</span>
+      <span>추세</span>
+      <span>사정률 분포 (86% ←→ 96%)</span>
+      <span>최근 3건</span>
+      <span>마지막 입찰</span>
+      <span></span>
+    </div>
+
+    <!-- 목록 (JS로 렌더) -->
+    <div id="compDBContainer">
+      <p style="text-align:center;color:var(--text-muted);padding:30px 0;font-size:13px">
+        📥 "이력 추가" 버튼으로 개찰결과를 붙여넣으면 자동 등록됩니다.
+      </p>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══ 경쟁사 DB 이력 추가 모달 ═══ -->
+<div id="compDBModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeCompDBModal()">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-header">
+      <h3>📥 경쟁사 이력 추가</h3>
+      <button class="modal-close" onclick="closeCompDBModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">입찰일자 *</label>
+          <input type="date" id="compDBDate" class="input-yellow" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">기초금액 *</label>
+          <input type="text" id="compDBBase" class="input-yellow" placeholder="100,000,000"
+            oninput="fmtWon(this);previewCompDB()" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">낙찰업체명 (선택)</label>
+          <input type="text" id="compDBWinner" placeholder="낙찰된 업체명" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px">
+        </div>
+      </div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:10px;line-height:1.8">
+        📌 나라장터 → 개찰결과상세조회 표 전체 선택(<kbd>Ctrl+A</kbd>) → 복사(<kbd>Ctrl+C</kbd>) → 아래에 붙여넣기
+      </div>
+      <textarea class="paste-area" id="compDBPaste" placeholder="여기에 Ctrl+V로 붙여넣으세요..."
+        oninput="previewCompDB()" style="height:140px"></textarea>
+      <div id="compDBPreview" style="margin-top:10px;max-height:200px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeCompDBModal()">취소</button>
+      <button class="btn btn-primary" onclick="applyCompDB()">✅ DB에 추가</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════
 //  유틸리티
@@ -1263,6 +1386,7 @@ function switchTab(id, btn) {
   if (id === 't3') renderMonthlyChart();
   if (id === 't4') updateSimProbability();
   if (id === 't5') { renderArchiveChips(); renderArchiveContent(); }
+  if (id === 't6') renderCompDBView();
 }
 
 // ══════════════════════════════════════════════
@@ -2114,6 +2238,213 @@ function autoSave() {
 }
 
 // ══════════════════════════════════════════════
+//  경쟁사 데이터베이스
+// ══════════════════════════════════════════════
+let _competitorDB = {}; // { "업체명": { records:[{date,base,bid,rate,win}] } }
+
+function idSafe(s) { return 'cdb_' + s.replace(/[^가-힣a-zA-Z0-9]/g, '_'); }
+
+function openCompDBModal() {
+  document.getElementById('compDBModal').style.display = 'flex';
+  document.getElementById('compDBDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('compDBBase').value = '';
+  document.getElementById('compDBWinner').value = '';
+  document.getElementById('compDBPaste').value = '';
+  document.getElementById('compDBPreview').innerHTML = '';
+}
+function closeCompDBModal() { document.getElementById('compDBModal').style.display = 'none'; }
+
+function previewCompDB() {
+  const raw    = document.getElementById('compDBPaste').value;
+  const base   = parseWon(document.getElementById('compDBBase').value);
+  const winner = document.getElementById('compDBWinner').value.trim();
+  const preview = document.getElementById('compDBPreview');
+  if (!raw.trim()) { preview.innerHTML = ''; return; }
+  const entries = parseTableText(raw);
+  if (!entries.length) { preview.innerHTML = '<p style="color:var(--danger);font-size:12px">인식된 업체가 없습니다.</p>'; return; }
+  let html = '<table class="data-table" style="font-size:12px"><thead><tr><th>업체명</th><th>입찰금액</th><th>사정률</th><th>낙찰</th></tr></thead><tbody>';
+  entries.forEach(e => {
+    const rate = base > 0 && e.amount > 0 ? e.amount / base : null;
+    const isWin = winner && e.name && e.name.includes(winner);
+    html += `<tr style="${isWin?'background:var(--success-light)':''}">
+      <td>${e.name||'-'}</td>
+      <td style="text-align:right">${(e.amount||0).toLocaleString('ko-KR')}원</td>
+      <td style="font-weight:700;color:var(--primary);text-align:right">${rate ? pct(rate) : '-'}</td>
+      <td style="text-align:center">${isWin ? '✅' : ''}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  preview.innerHTML = html;
+}
+
+function applyCompDB() {
+  const raw    = document.getElementById('compDBPaste').value;
+  const base   = parseWon(document.getElementById('compDBBase').value);
+  const date   = document.getElementById('compDBDate').value;
+  const winner = document.getElementById('compDBWinner').value.trim();
+  if (!date)        { alert('입찰일자를 입력하세요.'); return; }
+  if (base <= 0)    { alert('기초금액을 입력하세요.'); return; }
+  if (!raw.trim())  { alert('개찰결과를 붙여넣으세요.'); return; }
+  const entries = parseTableText(raw);
+  if (!entries.length) { alert('인식된 데이터가 없습니다.'); return; }
+  let added = 0;
+  entries.forEach(e => {
+    if (!e.name || e.amount <= 0) return;
+    const rate = e.amount / base;
+    const win  = winner ? e.name.includes(winner) : false;
+    if (!_competitorDB[e.name]) _competitorDB[e.name] = { records: [] };
+    const dup  = _competitorDB[e.name].records.some(r => r.date === date && r.bid === e.amount);
+    if (!dup) { _competitorDB[e.name].records.push({ date, base, bid:e.amount, rate, win }); added++; }
+    _competitorDB[e.name].records.sort((a,b) => a.date.localeCompare(b.date));
+  });
+  closeCompDBModal();
+  renderCompDBView();
+  autoSave();
+  const s = document.getElementById('saveStatus');
+  s.textContent = `✅ ${added}건 경쟁사 DB에 추가됨`; s.className = 'autosaved';
+  setTimeout(() => { s.textContent=''; s.className=''; }, 3500);
+}
+
+function calcCompStats(name) {
+  const rec = (_competitorDB[name]?.records) || [];
+  if (!rec.length) return null;
+  const rates   = rec.map(r => r.rate);
+  const avg     = rates.reduce((s,v)=>s+v,0) / rates.length;
+  const minR    = Math.min(...rates), maxR = Math.max(...rates);
+  const stddev  = Math.sqrt(rates.reduce((s,v)=>s+(v-avg)**2,0)/rates.length);
+  const recent3 = rates.slice(-3);
+  const recentA = recent3.reduce((s,v)=>s+v,0)/recent3.length;
+  const olderA  = rates.length > 3 ? rates.slice(0,-3).reduce((s,v)=>s+v,0)/(rates.length-3) : avg;
+  const trend   = recentA > olderA+0.0001 ? '+' : recentA < olderA-0.0001 ? '−' : '→';
+  const wins    = rec.filter(r=>r.win).length;
+  // 소수점 자리 습관 (사정률 소수점)
+  const prec = rates.map(r => { const s=(r*100).toFixed(5); return s.replace(/0+$/,'').split('.')[1]?.length||0; });
+  const avgPrec = Math.round(prec.reduce((s,v)=>s+v,0)/prec.length);
+  return { avg, min:minR, max:maxR, stddev, trend, recentA, count:rec.length, wins, avgPrec,
+           last: rec[rec.length-1]?.date||'', recent3 };
+}
+
+function renderCompDBView() {
+  const container = document.getElementById('compDBContainer');
+  const countEl   = document.getElementById('compDBCount');
+  if (!container) return;
+  const names = Object.keys(_competitorDB).sort();
+  countEl.textContent = `${names.length}개 업체 등록됨`;
+  if (!names.length) {
+    container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:30px 0;font-size:13px">📥 "이력 추가" 버튼으로 개찰결과를 붙여넣으면 자동 등록됩니다.</p>';
+    return;
+  }
+  const VIZ_MIN=0.86, VIZ_MAX=0.96, VIZ_RANGE=0.10;
+  const vp = r => Math.max(0,Math.min(100,((r-VIZ_MIN)/VIZ_RANGE*100))).toFixed(1);
+
+  let html = '';
+  const sorted = names.map(n=>({n, s:calcCompStats(n)})).filter(x=>x.s).sort((a,b)=>a.s.avg-b.s.avg);
+
+  sorted.forEach(({n, s}) => {
+    const tc = s.trend==='+' ? 'var(--danger)' : s.trend==='−' ? 'var(--primary)' : 'var(--text-muted)';
+    const barL = vp(s.min), barW = Math.max(1, parseFloat(vp(s.max))-parseFloat(barL));
+    const avgP = vp(s.avg);
+    const rec3 = (_competitorDB[n]?.records||[]).slice(-3).reverse().map(r=>`<span class="rate-chip">${pct(r.rate)}</span>`).join('');
+    const sid  = idSafe(n);
+    html += `
+      <div class="compdb-row" onclick="toggleCompDetail('${sid}')">
+        <span class="compdb-name" title="${n}">${n}</span>
+        <span style="font-size:12px;color:var(--text-muted);text-align:center">${s.count}</span>
+        <span class="compdb-avg">${pct(s.avg)}</span>
+        <span style="font-weight:800;color:${tc};font-size:16px">${s.trend}</span>
+        <div class="compdb-viz">
+          <div class="compdb-viz-track">
+            <div class="compdb-viz-range" style="left:${barL}%;width:${barW}%"></div>
+            <div class="compdb-viz-avg"   style="left:${avgP}%" title="평균 ${pct(s.avg)}"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center">${rec3}</div>
+        <span style="font-size:11px;color:var(--text-muted)">${s.last}</span>
+        <button class="btn btn-outline" style="font-size:11px;padding:3px 8px;color:var(--danger);border-color:var(--danger)"
+          onclick="event.stopPropagation();deleteCompany('${n.replace(/'/g,"\\'")}')">삭제</button>
+      </div>
+      <div class="compdb-detail-wrap" id="${sid}" style="display:none">${buildCompDetail(n, s)}</div>`;
+  });
+  container.innerHTML = html;
+}
+
+function toggleCompDetail(sid) {
+  const el = document.getElementById(sid);
+  if (el) el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+function buildCompDetail(name, s) {
+  const recs = (_competitorDB[name]?.records||[]).slice().reverse();
+  const rows = recs.map((r,i) => `
+    <tr>
+      <td>${r.date}</td>
+      <td style="text-align:right">${r.base.toLocaleString('ko-KR')}원</td>
+      <td style="text-align:right">${r.bid.toLocaleString('ko-KR')}원</td>
+      <td style="text-align:right;font-weight:700;color:var(--primary)">${pct(r.rate)}</td>
+      <td style="text-align:center">${r.win?'✅':''}</td>
+      <td style="text-align:center">
+        <button onclick="deleteCompRecord('${name.replace(/'/g,"\\'")}',${recs.length-1-i})"
+          style="font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:white">삭제</button>
+      </td>
+    </tr>`).join('');
+  return `
+    <div class="compdb-stats-row">
+      <div class="compdb-stat"><div class="compdb-stat-label">평균 사정률</div><div class="compdb-stat-val">${pct(s.avg)}</div></div>
+      <div class="compdb-stat"><div class="compdb-stat-label">최저</div><div class="compdb-stat-val" style="color:var(--primary)">${pct(s.min)}</div></div>
+      <div class="compdb-stat"><div class="compdb-stat-label">최고</div><div class="compdb-stat-val" style="color:var(--danger)">${pct(s.max)}</div></div>
+      <div class="compdb-stat"><div class="compdb-stat-label">표준편차</div><div class="compdb-stat-val">±${pct(s.stddev)}</div></div>
+      <div class="compdb-stat"><div class="compdb-stat-label">낙찰 횟수</div><div class="compdb-stat-val" style="color:var(--success)">${s.wins}/${s.count}</div></div>
+      <div class="compdb-stat"><div class="compdb-stat-label">소수점 습관</div><div class="compdb-stat-val">${s.avgPrec}자리</div></div>
+    </div>
+    <div style="max-height:220px;overflow-y:auto">
+      <table class="data-table" style="font-size:12px">
+        <thead><tr><th>일자</th><th>기초금액</th><th>입찰금액</th><th>사정률</th><th>낙찰</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function deleteCompRecord(name, idx) {
+  if (!_competitorDB[name]) return;
+  _competitorDB[name].records.splice(idx, 1);
+  if (!_competitorDB[name].records.length) delete _competitorDB[name];
+  renderCompDBView(); autoSave();
+}
+function deleteCompany(name) {
+  if (!confirm(`"${name}" 전체 이력을 삭제하시겠습니까?`)) return;
+  delete _competitorDB[name]; renderCompDBView(); autoSave();
+}
+
+function exportCompDB() {
+  const data = JSON.stringify(_competitorDB, null, 2);
+  const dt   = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const blob = new Blob([data], {type:'application/json;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {href:url, download:`경쟁사DB_${dt}.json`});
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+function importCompDB(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      Object.entries(d).forEach(([name, val]) => {
+        if (!_competitorDB[name]) _competitorDB[name] = { records: [] };
+        val.records?.forEach(r => {
+          const dup = _competitorDB[name].records.some(x => x.date===r.date && x.bid===r.bid);
+          if (!dup) _competitorDB[name].records.push(r);
+        });
+        _competitorDB[name].records.sort((a,b)=>a.date.localeCompare(b.date));
+      });
+      renderCompDBView(); autoSave();
+      alert(`경쟁사 DB 가져오기 완료 (${Object.keys(d).length}개 업체)`);
+    } catch(err) { alert('파일 오류: ' + err.message); }
+  };
+  reader.readAsText(file, 'utf-8');
+  event.target.value = '';
+}
+
+// ══════════════════════════════════════════════
 //  저장 / 불러오기 / 초기화
 // ══════════════════════════════════════════════
 function saveData() {
@@ -2129,6 +2460,7 @@ function saveData() {
     simPrices,
     archives: _archives,
     currentArchiveProject: _currentArchiveProject,
+    competitorDB: _competitorDB,
   };
 
   for (let i = 0; i < COMP_ROWS; i++) {
@@ -2195,6 +2527,12 @@ function loadData() {
     _currentArchiveProject = d.currentArchiveProject || Object.keys(_archives)[0] || null;
     renderArchiveChips();
     renderArchiveContent();
+  }
+
+  if (d.competitorDB) {
+    _competitorDB = d.competitorDB;
+    // t6가 활성이면 즉시 렌더
+    if (document.getElementById('t6')?.classList.contains('active')) renderCompDBView();
   }
 
   recalcAll();
