@@ -886,6 +886,19 @@ body {
   .calc-value { font-size: 14px; }
   .recommend-value { font-size: 20px; }
 }
+
+/* ─── OCR 이미지 입력 ─── */
+.ocr-tab-bar { display:flex; gap:6px; margin-bottom:12px; }
+.ocr-tab-btn { padding:7px 16px; border-radius:7px; border:1.5px solid var(--border); background:#fff; cursor:pointer; font-size:12px; font-weight:600; color:var(--text-muted); transition:.15s; }
+.ocr-tab-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+.ocr-drop-zone { border:2px dashed #d1d5db; border-radius:10px; padding:28px 16px; text-align:center; cursor:pointer; background:#f9fafb; transition:.2s; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; outline:none; }
+.ocr-drop-zone:hover, .ocr-drop-zone.drag-over, .ocr-drop-zone:focus { border-color:var(--primary); background:var(--primary-light); }
+.ocr-drop-icon { font-size:34px; }
+.ocr-img-preview { max-width:100%; max-height:220px; object-fit:contain; border-radius:8px; margin-top:10px; border:1px solid var(--border); display:none; }
+.ocr-progress-wrap { margin-top:10px; display:none; }
+.ocr-progress-bar-bg { background:#e5e7eb; border-radius:99px; height:8px; overflow:hidden; }
+.ocr-progress-bar { background:var(--primary); height:8px; border-radius:99px; width:0%; transition:width .3s; }
+.ocr-status-text { font-size:12px; color:var(--text-muted); margin-top:5px; }
 </style>
 </head>
 <body>
@@ -1368,11 +1381,44 @@ body {
           <input type="text" id="compDBWinner" placeholder="낙찰된 업체명" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px">
         </div>
       </div>
-      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:10px;line-height:1.8">
-        📌 나라장터 → 개찰결과상세조회 표 전체 선택(<kbd>Ctrl+A</kbd>) → 복사(<kbd>Ctrl+C</kbd>) → 아래에 붙여넣기
+      <!-- 탭 토글 -->
+      <div class="ocr-tab-bar">
+        <button class="ocr-tab-btn active" data-tab="text" onclick="switchOCRTab('compDBModal','text')">📋 텍스트 붙여넣기</button>
+        <button class="ocr-tab-btn" data-tab="image" onclick="switchOCRTab('compDBModal','image')">📷 이미지로 인식</button>
       </div>
-      <textarea class="paste-area" id="compDBPaste" placeholder="여기에 Ctrl+V로 붙여넣으세요..."
-        oninput="previewCompDB()" style="height:140px"></textarea>
+
+      <!-- 텍스트 탭 -->
+      <div data-section="text">
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:10px;line-height:1.8">
+          📌 나라장터 → 개찰결과상세조회 표 전체 선택(<kbd>Ctrl+A</kbd>) → 복사(<kbd>Ctrl+C</kbd>) → 아래에 붙여넣기
+        </div>
+        <textarea class="paste-area" id="compDBPaste" placeholder="여기에 Ctrl+V로 붙여넣으세요..."
+          oninput="previewCompDB()" style="height:140px"></textarea>
+      </div>
+
+      <!-- 이미지 탭 -->
+      <div data-section="image" style="display:none">
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:10px;line-height:1.8">
+          📸 나라장터 개찰결과 화면 캡처 후 아래에 <kbd>Ctrl+V</kbd>로 붙여넣기,<br>또는 클릭해서 이미지 파일 선택 → 🔍 인식 시작
+        </div>
+        <input type="file" id="compDBFileInput" accept="image/*" style="display:none"
+          onchange="onOCRFileChange(this,'compDBImgPreview')">
+        <div class="ocr-drop-zone" id="compDBDrop" tabindex="0">
+          <div class="ocr-drop-icon">📷</div>
+          <div style="font-size:13px;font-weight:600;color:#374151">스크린샷을 여기에 붙여넣기 (Ctrl+V)</div>
+          <div style="font-size:12px;color:var(--text-muted)">또는 클릭해서 이미지 파일 선택</div>
+        </div>
+        <img id="compDBImgPreview" class="ocr-img-preview" alt="미리보기">
+        <div class="ocr-progress-wrap" id="compDBProgWrap">
+          <div class="ocr-progress-bar-bg"><div class="ocr-progress-bar" id="compDBProgBar"></div></div>
+          <div class="ocr-status-text" id="compDBProgStatus"></div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px;width:100%"
+          onclick="runOCR('compDBPaste',previewCompDB,'compDBProgWrap','compDBProgBar','compDBProgStatus')">
+          🔍 이미지 인식 시작
+        </button>
+      </div>
+
       <div id="compDBPreview" style="margin-top:10px;max-height:200px;overflow-y:auto"></div>
     </div>
     <div class="modal-footer">
@@ -2313,6 +2359,7 @@ function openCompDBModal() {
   document.getElementById('compDBWinner').value = '';
   document.getElementById('compDBPaste').value = '';
   document.getElementById('compDBPreview').innerHTML = '';
+  _resetOCRState('compDBModal');
 }
 function closeCompDBModal() { document.getElementById('compDBModal').style.display = 'none'; }
 
@@ -2844,6 +2891,7 @@ function openTextModal() {
   document.getElementById('pasteArea').value = '';
   document.getElementById('pastePreview').innerHTML = '';
   document.getElementById('textModal').style.display = 'flex';
+  _resetOCRState('textModal');
   setTimeout(() => document.getElementById('pasteArea').focus(), 100);
 }
 
@@ -3564,25 +3612,200 @@ function renderProjectStats(proj) {
     recalcAll();
   }
 })();
+
+// ══════════════════════════════════════════════
+//  OCR 이미지 인식 (Tesseract.js)
+// ══════════════════════════════════════════════
+let _ocrBlob = null; // 대기 중인 이미지 Blob
+
+async function _loadTesseract() {
+  if (window.Tesseract) return;
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload = res; s.onerror = () => rej(new Error('Tesseract.js 로드 실패'));
+    document.head.appendChild(s);
+  });
+}
+
+async function runOCR(targetId, previewFn, progWrapId, progBarId, statusId) {
+  if (!_ocrBlob) { alert('먼저 이미지를 붙여넣거나 선택해주세요.'); return; }
+  const wrap   = document.getElementById(progWrapId);
+  const bar    = document.getElementById(progBarId);
+  const status = document.getElementById(statusId);
+  wrap.style.display = 'block';
+  bar.style.width = '5%';
+  status.textContent = 'Tesseract.js 로딩 중... (첫 실행 시 약 10-20초 소요)';
+  try {
+    await _loadTesseract();
+    status.textContent = '한국어 언어 데이터 준비 중...';
+    const worker = await Tesseract.createWorker('kor+eng', 1, {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          bar.style.width = Math.max(10, m.progress * 100).toFixed(0) + '%';
+          status.textContent = `인식 중... ${(m.progress * 100).toFixed(0)}%`;
+        } else if (m.status === 'loading tesseract core') {
+          bar.style.width = '10%'; status.textContent = '엔진 로딩 중...';
+        } else if (m.status === 'initializing api') {
+          bar.style.width = '20%'; status.textContent = '초기화 중...';
+        } else if (m.status === 'loading language traineddata') {
+          bar.style.width = '30%'; status.textContent = '한국어 데이터 다운로드 중...';
+        } else if (m.status === 'initialized api') {
+          bar.style.width = '40%'; status.textContent = '이미지 분석 준비 완료...';
+        }
+      }
+    });
+    const { data: { text } } = await worker.recognize(_ocrBlob);
+    await worker.terminate();
+    document.getElementById(targetId).value = text;
+    bar.style.width = '100%';
+    status.textContent = '✅ 인식 완료! 아래 미리보기를 확인하세요.';
+    previewFn();
+    // 텍스트 탭으로 전환해서 결과 보여주기
+    const modal = document.getElementById(targetId).closest('.modal-box');
+    if (modal) {
+      const textBtn = modal.querySelector('.ocr-tab-btn[data-tab="text"]');
+      const imgBtn  = modal.querySelector('.ocr-tab-btn[data-tab="image"]');
+      const textSec = modal.querySelector('[data-section="text"]');
+      const imgSec  = modal.querySelector('[data-section="image"]');
+      if (textBtn && imgBtn && textSec && imgSec) {
+        textSec.style.display = ''; imgSec.style.display = 'none';
+        textBtn.classList.add('active'); imgBtn.classList.remove('active');
+      }
+    }
+  } catch(e) {
+    status.textContent = '❌ 오류: ' + e.message;
+    console.error('OCR error', e);
+  }
+}
+
+function _initOCRDrop(dropId, imgId, fileInputId) {
+  const zone = document.getElementById(dropId);
+  if (!zone || zone.dataset.ocrInit) return;
+  zone.dataset.ocrInit = '1';
+
+  zone.addEventListener('click', () => document.getElementById(fileInputId)?.click());
+
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) _setOCRImage(f, imgId);
+  });
+
+  zone.addEventListener('paste', e => {
+    e.preventDefault();
+    const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items || [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) { _setOCRImage(item.getAsFile(), imgId); break; }
+    }
+  });
+}
+
+function _setOCRImage(blob, imgId) {
+  _ocrBlob = blob;
+  const img = document.getElementById(imgId);
+  if (!img) return;
+  const url = URL.createObjectURL(blob);
+  img.src = url; img.style.display = 'block';
+}
+
+function onOCRFileChange(input, imgId) {
+  const f = input.files[0];
+  if (!f) return;
+  _setOCRImage(f, imgId);
+  input.value = '';
+}
+
+function switchOCRTab(modal, tab) {
+  const box = document.getElementById(modal);
+  if (!box) return;
+  const textSec = box.querySelector('[data-section="text"]');
+  const imgSec  = box.querySelector('[data-section="image"]');
+  const textBtn = box.querySelector('.ocr-tab-btn[data-tab="text"]');
+  const imgBtn  = box.querySelector('.ocr-tab-btn[data-tab="image"]');
+  const isImg = tab === 'image';
+  if (textSec) textSec.style.display = isImg ? 'none' : '';
+  if (imgSec)  imgSec.style.display  = isImg ? '' : 'none';
+  if (textBtn) textBtn.classList.toggle('active', !isImg);
+  if (imgBtn)  imgBtn.classList.toggle('active', isImg);
+  if (isImg) {
+    // dropzone 초기화 (한 번만)
+    const dropZone = imgSec?.querySelector('.ocr-drop-zone');
+    const imgPreview = imgSec?.querySelector('.ocr-img-preview');
+    const fileInput  = imgSec?.querySelector('input[type="file"]');
+    if (dropZone && imgPreview && fileInput) {
+      _initOCRDrop(dropZone.id, imgPreview.id, fileInput.id);
+      setTimeout(() => dropZone.focus(), 50);
+    }
+  }
+}
+
+function _resetOCRState(modalId) {
+  _ocrBlob = null;
+  const box = document.getElementById(modalId);
+  if (!box) return;
+  // 텍스트 탭으로 초기화
+  switchOCRTab(modalId, 'text');
+  // 이미지 미리보기 초기화
+  box.querySelectorAll('.ocr-img-preview').forEach(img => { img.src = ''; img.style.display = 'none'; });
+  box.querySelectorAll('.ocr-progress-wrap').forEach(w => w.style.display = 'none');
+  box.querySelectorAll('.ocr-progress-bar').forEach(b => b.style.width = '0%');
+  box.querySelectorAll('.ocr-status-text').forEach(s => s.textContent = '');
+}
 </script>
 <!-- ═══ 텍스트 붙여넣기 모달 ═══ -->
 <div id="textModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('textModal')">
   <div class="modal-box">
     <div class="modal-header">
-      <h3>📋 나라장터 개찰결과 텍스트 붙여넣기</h3>
+      <h3>📋 나라장터 개찰결과 불러오기</h3>
       <button class="modal-close" onclick="closeModal('textModal')">✕</button>
     </div>
     <div class="modal-body">
-      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.8">
-        <strong>📌 사용 방법</strong><br>
-        1. 나라장터 → 개찰결과상세조회 페이지 열기<br>
-        2. 표를 마우스로 전체 선택 (또는 <kbd>Ctrl+A</kbd>)<br>
-        3. <kbd>Ctrl+C</kbd> 복사<br>
-        4. 아래 칸에 <kbd>Ctrl+V</kbd> 붙여넣기
+      <!-- 탭 토글 -->
+      <div class="ocr-tab-bar">
+        <button class="ocr-tab-btn active" data-tab="text" onclick="switchOCRTab('textModal','text')">📋 텍스트 붙여넣기</button>
+        <button class="ocr-tab-btn" data-tab="image" onclick="switchOCRTab('textModal','image')">📷 이미지로 인식</button>
       </div>
-      <textarea class="paste-area" id="pasteArea"
-        placeholder="여기에 Ctrl+V로 붙여넣으세요..."
-        oninput="previewParse()"></textarea>
+
+      <!-- 텍스트 탭 -->
+      <div data-section="text">
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.8">
+          <strong>📌 사용 방법</strong><br>
+          1. 나라장터 → 개찰결과상세조회 페이지 열기<br>
+          2. 표를 마우스로 전체 선택 (또는 <kbd>Ctrl+A</kbd>)<br>
+          3. <kbd>Ctrl+C</kbd> 복사<br>
+          4. 아래 칸에 <kbd>Ctrl+V</kbd> 붙여넣기
+        </div>
+        <textarea class="paste-area" id="pasteArea"
+          placeholder="여기에 Ctrl+V로 붙여넣으세요..."
+          oninput="previewParse()"></textarea>
+      </div>
+
+      <!-- 이미지 탭 -->
+      <div data-section="image" style="display:none">
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:10px;line-height:1.8">
+          📸 나라장터 개찰결과 화면 캡처 후 아래에 <kbd>Ctrl+V</kbd>로 붙여넣기,<br>또는 클릭해서 이미지 파일 선택 → 🔍 인식 시작
+        </div>
+        <input type="file" id="textModalFileInput" accept="image/*" style="display:none"
+          onchange="onOCRFileChange(this,'textModalImgPreview')">
+        <div class="ocr-drop-zone" id="textModalDrop" tabindex="0">
+          <div class="ocr-drop-icon">📷</div>
+          <div style="font-size:13px;font-weight:600;color:#374151">스크린샷을 여기에 붙여넣기 (Ctrl+V)</div>
+          <div style="font-size:12px;color:var(--text-muted)">또는 클릭해서 이미지 파일 선택</div>
+        </div>
+        <img id="textModalImgPreview" class="ocr-img-preview" alt="미리보기">
+        <div class="ocr-progress-wrap" id="textModalProgWrap">
+          <div class="ocr-progress-bar-bg"><div class="ocr-progress-bar" id="textModalProgBar"></div></div>
+          <div class="ocr-status-text" id="textModalProgStatus"></div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px;width:100%"
+          onclick="runOCR('pasteArea',previewParse,'textModalProgWrap','textModalProgBar','textModalProgStatus')">
+          🔍 이미지 인식 시작
+        </button>
+      </div>
+
       <div class="paste-preview" id="pastePreview"></div>
     </div>
     <div class="modal-footer">
