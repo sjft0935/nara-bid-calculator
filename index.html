@@ -587,7 +587,7 @@ body {
   resize: vertical;
   background: var(--input-yellow);
 }
-.paste-preview { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+.paste-preview { margin-top: 12px; font-size: 12px; color: var(--text-muted); max-height: 300px; overflow-y: auto; }
 .parse-row { padding: 4px 0; border-bottom: 1px solid #f1f5f9; display: flex; gap: 10px; }
 .parse-row span:first-child { font-weight: 600; color: var(--text); min-width: 160px; }
 .parse-row span:last-child { color: var(--primary-dark); font-weight: 700; }
@@ -2903,22 +2903,29 @@ function parseTableText(raw) {
   const seen = new Set();
 
   // ── ① 나라장터 개찰결과 특수 형식 감지 ───────────────────────────────
-  // 데이터 행: 사업자번호\t업체명\t대표자\t입찰금액\t사정률[\t추첨번호]
+  // 데이터 행: [순위?] 사업자번호\t업체명\t대표자\t입찰금액\t사정률[\t추첨번호]
+  // 1~7순위: 앞에 순위번호(1~7)가 붙음 → 사업자번호가 줄 시작이 아닐 수 있음
   // 상태 행:   2026/03/26 09:50:10\t낙찰하한선 미달  ← 건너뜀
   // 사업자번호 패턴: XXX-XX-XXXXX (예: 215-20-83732)
-  const BIZ_PAT = /^\d{3}-\d{2}-\d{5}/;
+  const BIZ_PAT = /\d{3}-\d{2}-\d{5}/;   // ^ 제거 — 줄 어디서든 매칭
   const DATE_PAT = /^\d{4}[\/\-]\d{2}[\/\-]\d{2}/;
   const hasBizFormat = lines.some(l => BIZ_PAT.test(l));
 
   if (hasBizFormat) {
     for (const line of lines) {
       if (DATE_PAT.test(line)) continue;   // 날짜/상태 라인 무시
-      if (!BIZ_PAT.test(line)) continue;   // 사업자번호 라인만 처리
+
+      // 사업자번호를 줄 어디서든 탐색 (1~7순위는 앞에 순위번호가 붙어있음)
+      const bizMatch = line.match(BIZ_PAT);
+      if (!bizMatch) continue;
+
+      // 사업자번호 위치부터만 파싱 → 순위번호 자동 제거
+      const cleanLine = line.substring(line.indexOf(bizMatch[0]));
 
       // 탭 우선, 없으면 2칸+ 공백으로 분리
-      const cells = line.includes('\t')
-        ? line.split('\t')
-        : line.split(/\s{2,}/);
+      const cells = cleanLine.includes('\t')
+        ? cleanLine.split('\t')
+        : cleanLine.split(/\s{2,}/);
 
       // [0]=사업자번호  [1]=업체명  [2]=대표자  [3]=입찰금액  [4]=사정률  [5~]=추첨번호
       const name   = (cells[1] || '').trim().replace(/\s+/g, '');
