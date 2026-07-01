@@ -3166,10 +3166,18 @@ function renderArchiveChips() {
     return;
   }
   el.innerHTML = projects.map(p => `
-    <div class="project-chip ${p === _currentArchiveProject ? 'active' : ''}" onclick="selectArchiveProject(${JSON.stringify(p)})">
+    <div class="project-chip ${p === _currentArchiveProject ? 'active' : ''}">
       📁 ${p}
-      <span class="chip-del" title="삭제" onclick="event.stopPropagation();deleteArchiveProject(${JSON.stringify(p)})">✕</span>
+      <span class="chip-del" title="삭제">✕</span>
     </div>`).join('');
+  el.querySelectorAll('.project-chip').forEach((chip, i) => {
+    const name = projects[i];
+    chip.addEventListener('click', () => selectArchiveProject(name));
+    chip.querySelector('.chip-del').addEventListener('click', e => {
+      e.stopPropagation();
+      deleteArchiveProject(name);
+    });
+  });
 }
 
 function addArchiveYear() {
